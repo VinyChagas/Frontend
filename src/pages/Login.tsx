@@ -1,51 +1,74 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { motion } from "framer-motion";
-import { Eye, EyeOff, Lock } from "lucide-react";
+import { Lock, Eye, EyeSlash } from "@phosphor-icons/react";
+import "../styles/components/Login.scss";
 
-interface LoginProps {
-  onLogin: () => void;
-}
 
-export default function Login({ onLogin }: LoginProps) {
-  const [senha, setSenha] = useState("");
+const Login: React.FC = () => {
   const [mostrarSenha, setMostrarSenha] = useState(false);
+  const [senha, setSenha] = useState("");
   const [erro, setErro] = useState("");
 
-  const senhaCorreta = "admin123";
+  const senhaCorreta = "admin123@";
 
   const handleLogin = () => {
-    if (senha === senhaCorreta) {
-      onLogin();
+    if (senha === "") {
+      setErro("A senha não pode estar vazia.");
+    } else if (senha !== senhaCorreta) {
+      setErro("Senha incorreta.");
     } else {
-      setErro("Senha incorreta");
+      setErro("");
+      // prosseguir com o login
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-sky-800 via-blue-900 to-indigo-900">
+    <div className="login-root">
       <motion.div
         initial={{ opacity: 0, y: 30, scale: 0.95 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: 0.5, ease: "easeOut" }}
-        className="bg-white/90 backdrop-blur-xl border border-white/30 shadow-2xl p-10 rounded-2xl w-full max-w-sm space-y-8"
+        className="login-container"
       >
         {/* Header */}
-        <div className="text-center space-y-2">
-          <div className="inline-flex items-center justify-center bg-blue-600 text-white p-3 rounded-full shadow">
-            <Lock size={24} />
-          </div>
-          <h2 className="text-2xl font-extrabold text-gray-900">Acesso Restrito</h2>
-          <p className="text-gray-500 text-sm">Digite a senha do administrador para continuar</p>
+        <div className="login-header">
+          <motion.div
+            className="login-icon"
+            initial={{ scale: 0.7, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ delay: 0.15, type: "spring", stiffness: 320, damping: 18 }}
+          >
+            <Lock size={28} weight="bold" />
+          </motion.div>
+          <motion.h2
+            className="login-title"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.22, duration: 0.45 }}
+          >
+            Acesso Restrito
+          </motion.h2>
+          <motion.p
+            className="login-subtitle"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.32, duration: 0.45 }}
+          >
+            Digite a senha do administrador
+          </motion.p>
         </div>
 
         {/* Campo de senha */}
-        <div className="relative">
+        <motion.div
+          className="login-input-wrapper"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.45, duration: 0.4 }}
+        >
           <input
             type={mostrarSenha ? "text" : "password"}
-            placeholder="Senha"
-            className={`w-full py-2 pl-4 pr-10 border rounded-lg shadow-sm bg-white/80 text-gray-700 placeholder:text-gray-400 focus:outline-none focus:ring-2 ${
-              erro ? "border-red-400 focus:ring-red-400" : "border-gray-300 focus:ring-blue-500"
-            }`}
+            placeholder="Digite sua senha"
+            className={`login-input${erro ? " login-input-error" : ""}`}
             value={senha}
             onChange={(e) => {
               setSenha(e.target.value);
@@ -57,17 +80,18 @@ export default function Login({ onLogin }: LoginProps) {
           <button
             type="button"
             onClick={() => setMostrarSenha((prev) => !prev)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+            className="login-eye-btn"
             tabIndex={-1}
+            aria-label={mostrarSenha ? "Ocultar senha" : "Mostrar senha"}
           >
-            {mostrarSenha ? <EyeOff size={20} /> : <Eye size={20} />}
+            {mostrarSenha ? <EyeSlash size={20} /> : <Eye size={20} />}
           </button>
-        </div>
+        </motion.div>
 
-        {/* Erro */}
+        {/* Mensagem de erro */}
         {erro && (
           <motion.p
-            className="text-sm text-red-600 font-medium text-center"
+            className="login-error"
             initial={{ opacity: 0, y: 5 }}
             animate={{ opacity: 1, y: 0 }}
           >
@@ -80,11 +104,14 @@ export default function Login({ onLogin }: LoginProps) {
           whileHover={{ scale: 1.03 }}
           whileTap={{ scale: 0.97 }}
           onClick={handleLogin}
-          className="w-full py-2 rounded-lg bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-bold shadow hover:from-blue-700 hover:to-cyan-700 transition"
+          className="login-btn"
+          transition={{ type: "spring", stiffness: 320, damping: 18 }}
         >
           Entrar
         </motion.button>
       </motion.div>
     </div>
   );
-}
+};
+
+export default Login;
