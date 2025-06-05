@@ -1,0 +1,143 @@
+.home-container {
+  padding: 2rem;
+  font-family: 'Segoe UI', sans-serif;
+  background: #f8f9fc;
+
+  .summary-cards {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+    margin-bottom: 2rem;
+
+    .card {
+      display: flex;
+      background: white;
+      border-radius: 12px;
+      padding: 1rem;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.06);
+
+      .icon {
+        font-size: 1.8rem;
+        margin-right: 1rem;
+      }
+
+      .info {
+        .title {
+          font-size: 0.85rem;
+          color: #666;
+        }
+        .value {
+          font-size: 1.5rem;
+          font-weight: bold;
+          margin: 0.3rem 0;
+        }
+        .updated {
+          font-size: 0.75rem;
+          color: #aaa;
+        }
+      }
+    }
+  }
+
+  .stepper {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: white;
+    border-radius: 12px;
+    padding: 1rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+
+    .step {
+      text-align: center;
+      flex: 1;
+      position: relative;
+
+      .icon {
+        width: 30px;
+        height: 30px;
+        margin: 0 auto 5px;
+      }
+
+      &.done .icon {
+        color: green;
+      }
+      &.current .icon {
+        color: orange;
+      }
+      &.error .icon {
+        color: red;
+      }
+      &.pending .icon {
+        color: #bbb;
+      }
+    }
+  }
+
+  .data-table {
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+
+    .table-header,
+    .table-row {
+      display: grid;
+      grid-template-columns: 2fr 2fr 2fr 1fr 1fr;
+      padding: 1rem;
+      align-items: center;
+      font-size: 0.9rem;
+
+      &.table-header {
+        font-weight: bold;
+        background: #f1f5f9;
+      }
+
+      &.table-row:nth-child(even) {
+        background: #f9fafb;
+      }
+
+      .badge {
+        padding: 0.3rem 0.6rem;
+        border-radius: 1rem;
+        font-weight: 500;
+        text-align: center;
+        width: fit-content;
+      }
+
+      .green {
+        background: #d1fae5;
+        color: #065f46;
+      }
+
+      .yellow {
+        background: #fef9c3;
+        color: #92400e;
+      }
+
+      .red {
+        background: #fee2e2;
+        color: #991b1b;
+      }
+
+      .gray {
+        background: #e5e7eb;
+        color: #374151;
+      }
+
+      .btn-detalhes {
+        background: #e2e8f0;
+        border: none;
+        border-radius: 0.5rem;
+        padding: 0.4rem 0.8rem;
+        cursor: pointer;
+        transition: 0.2s ease;
+
+        &:hover {
+          background: #cbd5e1;
+        }
+      }
+    }
+  }
+}

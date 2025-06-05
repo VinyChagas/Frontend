@@ -1,16 +1,24 @@
-import { useState } from "react";
+import { BrowserRouter as Router, Routes, Route, useLocation } from "react-router-dom";
+import { AnimatePresence } from "framer-motion";
 import Login from "./pages/Login";
+import Home from "./pages/Home";
 
-function App() {
-  const [autenticado, setAutenticado] = useState(false);
-
-  return autenticado ? (
-    <div className="h-screen flex items-center justify-center">
-      <h1 className="text-2xl font-bold text-gray-800">Bem-vindo 🎉</h1>
-    </div>
-  ) : (
-    <Login onLogin={() => setAutenticado(true)} />
+function AnimatedRoutes() {
+  const location = useLocation();
+  return (
+    <AnimatePresence mode="wait">
+      <Routes location={location} key={location.pathname}>
+        <Route path="/" element={<Login />} />
+        <Route path="/home" element={<Home />} />
+      </Routes>
+    </AnimatePresence>
   );
 }
 
-export default App;
+export default function App() {
+  return (
+    <Router>
+      <AnimatedRoutes />
+    </Router>
+  );
+}

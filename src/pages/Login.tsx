@@ -1,13 +1,15 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { Lock, Eye, EyeSlash } from "@phosphor-icons/react";
-import "../styles/components/Login.scss";
+import { useNavigate } from "react-router-dom";
+import "../styles/Login.scss";
 
 
 const Login: React.FC = () => {
   const [mostrarSenha, setMostrarSenha] = useState(false);
   const [senha, setSenha] = useState("");
   const [erro, setErro] = useState("");
+  const navigate = useNavigate();
 
   const senhaCorreta = "admin123@";
 
@@ -18,15 +20,22 @@ const Login: React.FC = () => {
       setErro("Senha incorreta.");
     } else {
       setErro("");
-      // prosseguir com o login
+      navigate("/home");
     }
   };
 
   return (
-    <div className="login-root">
+    <motion.div
+      className="login-root"
+      initial={{ opacity: 0, x: 60 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: -60 }}
+      transition={{ duration: 0.4, ease: "easeInOut" }}
+    >
       <motion.div
         initial={{ opacity: 0, y: 30, scale: 0.95 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: -30, scale: 0.95 }}
         transition={{ duration: 0.5, ease: "easeOut" }}
         className="login-container"
       >
@@ -110,7 +119,7 @@ const Login: React.FC = () => {
           Entrar
         </motion.button>
       </motion.div>
-    </div>
+    </motion.div>
   );
 };
 
