@@ -8,7 +8,7 @@
   gap: 2.5rem;
   min-height: 60vh;
   margin-top: 1.5rem; // Reduzido para aproximar do topo
-  margin-left: 1rem;
+  margin-left: 0rem;
 }
 
 .home-card {
@@ -19,7 +19,7 @@
   min-width: 360px;
   max-width: 380px;
   text-align: center;
-  transition: box-shadow 0.2s;
+  transition: box-shadow 0.2s, transform 0.22s cubic-bezier(.4,0,.2,1); // adicionado transform
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -27,7 +27,8 @@
 }
 
 .home-card:hover {
-  box-shadow: 0 8px 32px rgba(56,189,248,0.13);
+  box-shadow: 0 12px 32px rgba(56,189,248,0.13);
+  transform: translateY(-20px); // efeito de subir
 }
 
 .home-card-header {

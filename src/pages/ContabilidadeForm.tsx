@@ -1,6 +1,6 @@
 import { useNavigate, useParams } from "react-router-dom";
 import { useState, useEffect } from "react";
-import { Eye, EyeSlash } from "@phosphor-icons/react";
+import { Eye, EyeSlash, UploadSimple } from "@phosphor-icons/react";
 import "../styles/Contabilidades.scss";
 
 // Simulação de dados globais (substitua por contexto/backend depois)
@@ -97,126 +97,168 @@ export default function ContabilidadeForm() {
   return (
     <div className="page-contabilidades-wrapper">
       <div className="form-container">
-        {/* Removido o título dinâmico */}
+        {/* Título e botão Importar CNPJ */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.2rem" }}>
+          <h2 style={{ margin: 0, fontSize: "1.35rem", fontWeight: 700 }}>Dados Cadastrais</h2>
+          <button
+            type="button"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "0.5rem",
+              background: "linear-gradient(90deg, #2563eb 60%, #38bdf8 100%)",
+              color: "#fff",
+              fontWeight: 700,
+              fontSize: "1.01rem",
+              border: "none",
+              borderRadius: "8px",
+              padding: "0.6rem 1.2rem",
+              cursor: "pointer",
+              boxShadow: "0 4px 16px rgba(56,189,248,0.13)",
+            }}
+            // onClick={...} // implementar ação real depois
+          >
+            <UploadSimple size={18} /> Importar CNPJ
+          </button>
+        </div>
         <form onSubmit={handleSubmit} autoComplete="off">
-          <label>
-            Nome da empresa:
-            <input
-              type="text"
-              name="nome"
-              value={form.nome}
-              onChange={handleChange}
-              required
-              maxLength={80}
-              className="input-form"
-            />
-          </label>
-          <label>
-            CNPJ:
-            <input
-              type="text"
-              name="cnpj"
-              value={form.cnpj}
-              onChange={handleChange}
-              required
-              maxLength={18}
-              className={`input-form${erros.cnpj ? " input-error" : ""}`}
-              placeholder="00.000.000/0000-00"
-            />
-            {erros.cnpj && <span className="error-message">{erros.cnpj}</span>}
-          </label>
-          <label>
-            Endereço:
-            <input
-              type="text"
-              name="endereco"
-              value={form.endereco}
-              onChange={handleChange}
-              required
-              maxLength={120}
-              className="input-form"
-            />
-          </label>
-          <label>
-            Número de contato:
-            <input
-              type="text"
-              name="telefone"
-              value={form.telefone}
-              onChange={handleChange}
-              required
-              maxLength={15}
-              className={`input-form${erros.telefone ? " input-error" : ""}`}
-              placeholder="(99) 99999-9999"
-            />
-            {erros.telefone && <span className="error-message">{erros.telefone}</span>}
-          </label>
-          <label>
-            Email:
-            <input
-              type="email"
-              name="email"
-              value={form.email}
-              onChange={handleChange}
-              required
-              maxLength={100}
-              className="input-form"
-            />
-          </label>
-          <label>
-            Login:
-            <input
-              type="text"
-              name="login"
-              value={form.login}
-              onChange={handleChange}
-              required
-              maxLength={32}
-              className="input-form"
-            />
-          </label>
-          <label className="senha-label">
-            Senha:
-            <div className="senha-input-wrapper">
+          {/* Linha 1: Nome, CNPJ, Email */}
+          <div style={{ display: "flex", gap: "1rem", marginBottom: "0.7rem" }}>
+            <label style={{ flex: 2 }}>
+              Nome da empresa:
               <input
-                type={showSenha ? "text" : "password"}
-                name="senha"
-                value={form.senha}
+                type="text"
+                name="nome"
+                value={form.nome}
+                onChange={handleChange}
+                required
+                maxLength={80}
+                className="input-form"
+              />
+            </label>
+            <label style={{ flex: 1.2 }}>
+              CNPJ:
+              <input
+                type="text"
+                name="cnpj"
+                value={form.cnpj}
+                onChange={handleChange}
+                required
+                maxLength={18}
+                className={`input-form${erros.cnpj ? " input-error" : ""}`}
+                placeholder="00.000.000/0000-00"
+              />
+              {erros.cnpj && <span className="error-message">{erros.cnpj}</span>}
+            </label>
+            <label style={{ flex: 2 }}>
+              Email:
+              <input
+                type="email"
+                name="email"
+                value={form.email}
+                onChange={handleChange}
+                required
+                maxLength={100}
+                className="input-form"
+              />
+            </label>
+          </div>
+          {/* Linha 2: Endereço, Telefone */}
+          <div style={{ display: "flex", gap: "1rem", marginBottom: "0.7rem" }}>
+            <label style={{ flex: 2 }}>
+              Endereço:
+              <input
+                type="text"
+                name="endereco"
+                value={form.endereco}
+                onChange={handleChange}
+                required
+                maxLength={120}
+                className="input-form"
+              />
+            </label>
+            <label style={{ flex: 1 }}>
+              Número de contato:
+              <input
+                type="text"
+                name="telefone"
+                value={form.telefone}
+                onChange={handleChange}
+                required
+                maxLength={15}
+                className={`input-form${erros.telefone ? " input-error" : ""}`}
+                placeholder="(99) 99999-9999"
+              />
+              {erros.telefone && <span className="error-message">{erros.telefone}</span>}
+            </label>
+          </div>
+          {/* Linha 3: Login, Senha, Clientes */}
+          <div style={{ display: "flex", gap: "1rem", marginBottom: "0.7rem" }}>
+            <label style={{ flex: 1 }}>
+              Login:
+              <input
+                type="text"
+                name="login"
+                value={form.login}
                 onChange={handleChange}
                 required
                 maxLength={32}
-                className={`input-form${erros.senha ? " input-error" : ""}`}
+                className="input-form"
               />
-              <button
-                type="button"
-                tabIndex={-1}
-                className="senha-eye-btn"
-                onClick={() => setShowSenha((v) => !v)}
-                aria-label={showSenha ? "Ocultar senha" : "Mostrar senha"}
-              >
-                {showSenha ? <EyeSlash size={20} /> : <Eye size={20} />}
+            </label>
+            <label className="senha-label" style={{ flex: 1 }}>
+              Senha:
+              <div className="senha-input-wrapper">
+                <input
+                  type={showSenha ? "text" : "password"}
+                  name="senha"
+                  value={form.senha}
+                  onChange={handleChange}
+                  required
+                  maxLength={32}
+                  className={`input-form${erros.senha ? " input-error" : ""}`}
+                />
+                <button
+                  type="button"
+                  tabIndex={-1}
+                  className="senha-eye-btn"
+                  onClick={() => setShowSenha((v) => !v)}
+                  aria-label={showSenha ? "Ocultar senha" : "Mostrar senha"}
+                >
+                  {showSenha ? <EyeSlash size={20} /> : <Eye size={20} />}
+                </button>
+              </div>
+              {erros.senha && <span className="error-message">{erros.senha}</span>}
+            </label>
+            <label style={{ flex: 0.7 }}>
+              Nº clientes:
+              <input
+                type="number"
+                name="clientes"
+                value={form.clientes}
+                onChange={handleChange}
+                min={0}
+                required
+                max={9999}
+                className="input-form"
+              />
+            </label>
+          </div>
+          {/* Botões: Importar Logo à esquerda, Salvar/Cancelar à direita */}
+          <div className="form-actions-row">
+            <button
+              type="button"
+              className="importar-logo-btn"
+              // onClick={...}
+            >
+              <UploadSimple size={15} /> Importar Logo
+            </button>
+            <div style={{ display: "flex", gap: "1rem" }}>
+              <button type="submit">Salvar</button>
+              <button type="button" onClick={() => navigate("/contabilidades")}>
+                Cancelar
               </button>
             </div>
-            {erros.senha && <span className="error-message">{erros.senha}</span>}
-          </label>
-          <label>
-            Número de clientes:
-            <input
-              type="number"
-              name="clientes"
-              value={form.clientes}
-              onChange={handleChange}
-              min={0}
-              required
-              max={9999}
-              className="input-form"
-            />
-          </label>
-          <div style={{ marginTop: "1.5rem", display: "flex", gap: "1rem" }}>
-            <button type="submit">Salvar</button>
-            <button type="button" onClick={() => navigate("/contabilidades")}>
-              Cancelar
-            </button>
           </div>
         </form>
       </div>

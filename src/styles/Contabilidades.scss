@@ -174,18 +174,34 @@
 }
 
 .form-container {
-  max-width: 500px;
+  max-width: 1000px; 
   width: 100%;
   margin-top: 2.5rem;
-  padding: 2rem 2rem 1.5rem 2rem;
+  padding: 2.5rem 2.5rem 2rem 2.5rem; // padding aumentado
   border: 1px solid #e5e7eb;
-  border-radius: 12px;
+  border-radius: 16px; // mais arredondado
   background-color: #fff;
-  box-shadow: 0 4px 16px rgba(30,41,59,0.07);
+  box-shadow: 0 4px 24px rgba(30,41,59,0.10); // sombra mais suave
   font-family: Arial, sans-serif;
   display: flex;
   flex-direction: column;
-  gap: 0.7rem;
+  gap: 0;
+}
+
+// Espaçamento maior entre linhas do formulário
+.form-container form > div {
+  margin-bottom: 1.2rem !important; // aumentado
+}
+
+// Inputs maiores e mais espaçosos
+.input-form {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  margin: 0;
+  box-sizing: border-box;
+  padding: 1.1rem 1.2rem; // padding aumentado
+  font-size: 1.13rem; // fonte maior
 }
 
 .form-container h2 {
@@ -200,7 +216,8 @@
 .form-container form {
   display: flex;
   flex-direction: column;
-  gap: 0.7rem;
+  // ...existing code...
+  gap: 0;
 }
 
 .form-container label {
@@ -209,9 +226,10 @@
   font-size: 1.05rem;
   font-weight: 600;
   color: #22223b;
-  margin-bottom: 0.2rem;
-  gap: 0.3rem;
+  margin-bottom: 0.1rem;
+  gap: 0.2rem;
   align-items: flex-start;
+  width: 100%;
 }
 
 .form-container input {
@@ -289,31 +307,38 @@
 
 .input-form {
   width: 100%;
-  max-width: 500px;
-  min-width: 120px;
-  margin-left: 0;
-  margin-right: auto;
+  min-width: 0;
+  max-width: 100%;
+  margin: 0;
   box-sizing: border-box;
 }
 
-.senha-label {
+.error-message {
+  color: #ef4444;
+  font-size: 0.97rem;
+  margin-top: 0.1rem;
+  font-weight: 600;
+  letter-spacing: -0.2px;
+  display: block;
+}
+
+.form-container .senha-label {
   position: relative;
 }
 
-.senha-input-wrapper {
+.form-container .senha-input-wrapper {
   display: flex;
   align-items: center;
   position: relative;
   width: 100%;
-  max-width: 500px;
 }
 
-.senha-input-wrapper input {
+.form-container .senha-input-wrapper input {
   flex: 1;
   padding-right: 2.2rem;
 }
 
-.senha-eye-btn {
+.form-container .senha-eye-btn {
   position: absolute;
   right: 0.5rem;
   top: 50%;
@@ -330,9 +355,57 @@
   z-index: 2;
 }
 
-.senha-eye-btn:hover,
-.senha-eye-btn:focus {
+.form-container .senha-eye-btn:hover,
+.form-container .senha-eye-btn:focus {
   color: #2563eb;
+}
+
+/* Linha de botões: alinhar "Importar Logo" à esquerda e os outros à direita */
+.form-container .form-actions-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+/* Botão Importar Logo: removes margin-top para alinhar verticalmente */
+.importar-logo-btn {
+  margin-top: 0;
+  font-size: 0.98rem;
+  padding: 0.35rem 0.9rem;
+  border-radius: 7px;
+  border: 1.5px solid #2563eb;
+  background: #f6f7fa;
+  color: #2563eb;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.importar-logo-btn:hover {
+  background: #e0f2fe;
+  color: #1e40af;
+  border-color: #1e40af;
+}
+
+// Responsivo para linhas do formulário
+@media (max-width: 900px) {
+  .form-container {
+    max-width: 100vw;
+    padding: 1rem 0.5rem;
+    border-radius: 10px;
+  }
+  .form-container form > div {
+    flex-direction: column !important;
+    gap: 0.2rem !important;
+    margin-bottom: 0.7rem !important;
+  }
+  .form-container label {
+    margin-bottom: 0.5rem;
+  }
 }
 
 @media (max-width: 600px) {
