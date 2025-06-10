@@ -22,7 +22,7 @@ export default function Home() {
   return (
     <div className="home-cards-container">
       {cards.map((card, idx) => (
-        <div className="home-card" key={idx}>
+        < button className="home-card" key={idx}>
           <div className="home-card-header">
             <div className="home-card-logo" />
             <div className="home-card-title-group">
@@ -45,7 +45,7 @@ export default function Home() {
               <div className="home-card-indicator-status home-card-indicator-status--wide" />
             </div>
           </div>
-        </div>
+        </button>
       ))}
     </div>
   );
