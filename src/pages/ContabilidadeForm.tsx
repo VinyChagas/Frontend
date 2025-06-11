@@ -2,6 +2,8 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { Eye, EyeSlash, UploadSimple } from "@phosphor-icons/react";
 import "../styles/Contabilidades.scss";
+import axios from "axios";
+
 
 // Simulação de dados globais (substitua por contexto/backend depois)
 const empresasMock = [
@@ -83,7 +85,7 @@ export default function ContabilidadeForm() {
     setErros((prev) => ({ ...prev, [name]: "" }));
   }
 
-  function handleSubmit(e: React.FormEvent) {
+   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const novoErros: { [k: string]: string } = {};
     if (!validarCNPJ(form.cnpj)) novoErros.cnpj = "CNPJ inválido";
@@ -91,7 +93,14 @@ export default function ContabilidadeForm() {
     if (!validarSenha(form.senha)) novoErros.senha = "Mínimo 6 caracteres";
     setErros(novoErros);
     if (Object.keys(novoErros).length > 0) return;
+      try {
+    await axios.post("http://localhost:4000/empresas", form);
+    alert("Empresa cadastrada com sucesso!");
     navigate("/contabilidades");
+  } catch (error) {
+    console.error("Erro ao cadastrar empresa", error);
+    alert("Erro ao cadastrar empresa. Verifique os dados.");
+}
   }
 
   return (
