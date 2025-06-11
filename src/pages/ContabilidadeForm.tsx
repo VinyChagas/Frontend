@@ -32,11 +32,12 @@ export default function ContabilidadeForm() {
   });
   const [showSenha, setShowSenha] = useState(false);
   const [erros, setErros] = useState<{ [k: string]: string }>({});
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   useEffect(() => {
     if (id) {
       axios.get(`http://localhost:4000/empresas/${id}`)
-        .then((res) => setForm(res.data))
+        .then((res) => setForm(res.data as EmpresaForm)) // Corrigido: faz cast para EmpresaForm
         .catch((err) => {
           console.error("Erro ao buscar empresa para edição:", err);
           alert("Erro ao carregar dados da empresa.");
@@ -85,6 +86,19 @@ export default function ContabilidadeForm() {
     } catch (error) {
       console.error("Erro ao salvar empresa", error);
       alert("Erro ao salvar empresa. Verifique os dados.");
+    }
+  }
+
+  async function handleDelete() {
+    if (!id) return;
+    try {
+      await axios.delete(`http://localhost:4000/empresas/${id}`);
+      setShowDeleteModal(false);
+      alert("Empresa excluída com sucesso!");
+      navigate("/contabilidades");
+    } catch (error) {
+      setShowDeleteModal(false);
+      alert("Erro ao excluir empresa.");
     }
   }
 
@@ -291,16 +305,103 @@ export default function ContabilidadeForm() {
   <div className="form-actions-row">
     <button
       type="button"
-      className="importar-logo-btn"
-      onClick={() => document.getElementById("input-cnpj")?.click()}
+      className="excluir-btn"
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: "0.5rem",
+        background: "linear-gradient(90deg, #dc2626 60%, #f87171 100%)",
+        color: "#fff",
+        fontWeight: 700,
+        fontSize: "1.01rem",
+        border: "none",
+        borderRadius: "8px",
+        padding: "0.6rem 1.2rem",
+        cursor: "pointer",
+        boxShadow: "0 4px 16px rgba(239,68,68,0.13)",
+        minWidth: "110px",
+        width: "110px", 
+        justifyContent: "center"
+      }}
+      onClick={() => setShowDeleteModal(true)}
+      disabled={!id}
     >
-      <UploadSimple size={15} /> Importar CNPJ
+      Excluir
     </button>
     <div style={{ display: "flex", gap: "1rem" }}>
-      <button type="submit">Salvar</button>
+      <button type="submit" style={{ minWidth: "110px", width: "110px" }}>Salvar</button>
       <button type="button" onClick={() => navigate("/contabilidades")}>Cancelar</button>
     </div>
   </div>
+  {/* Modal de confirmação de exclusão */}
+  {showDeleteModal && (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(30,41,59,0.45)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 99999,
+      }}
+    >
+      <div
+        style={{
+          background: "#fff",
+          color: "#222",
+          padding: "2rem 2.5rem",
+          borderRadius: "18px",
+          boxShadow: "0 8px 32px rgba(30,41,59,0.18)",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: "1.2rem",
+          minWidth: "260px",
+          fontSize: "1.15rem",
+          fontWeight: 500,
+        }}
+      >
+        <span>Tem certeza que deseja excluir esta empresa?</span>
+        <div style={{ display: "flex", gap: "1.2rem" }}>
+          <button
+            style={{
+              background: "#dc2626",
+              color: "#fff",
+              border: "none",
+              borderRadius: "8px",
+              padding: "0.6rem 1.5rem",
+              fontSize: "1rem",
+              fontWeight: 600,
+              cursor: "pointer",
+              transition: "background 0.18s",
+            }}
+            type="button"
+            onClick={handleDelete}
+          >
+            Excluir
+          </button>
+          <button
+            style={{
+              background: "#e5e7eb",
+              color: "#222",
+              border: "none",
+              borderRadius: "8px",
+              padding: "0.6rem 1.5rem",
+              fontSize: "1rem",
+              fontWeight: 600,
+              cursor: "pointer",
+              transition: "background 0.18s",
+            }}
+            type="button"
+            onClick={() => setShowDeleteModal(false)}
+          >
+            Cancelar
+          </button>
+        </div>
+      </div>
+    </div>
+  )}
 </form>
       </div>
     </div>
