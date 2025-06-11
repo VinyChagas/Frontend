@@ -16,6 +16,7 @@ export default function Contabilidades() {
   const [busca, setBusca] = useState("");
   const navigate = useNavigate();
 
+  // 🔁 Atualiza empresas ao carregar
   useEffect(() => {
     axios.get("http://localhost:4000/empresas")
       .then(res => setEmpresas(res.data))
@@ -25,6 +26,7 @@ export default function Contabilidades() {
       });
   }, []);
 
+  // 🔍 Filtro de busca
   const termo = busca.trim().toLowerCase();
   const empresasFiltradas = empresas.filter((e) => {
     if (!termo) return true;
@@ -76,7 +78,7 @@ export default function Contabilidades() {
             </div>
             <button
               className="contabilidades-editar-btn"
-              onClick={() => navigate(`/contabilidades/${empresa.id}`)}
+              onClick={() => navigate(`/contabilidades/${empresa.id}`)} // ← esse id vai ser usado pelo form
             >
               Editar
             </button>
