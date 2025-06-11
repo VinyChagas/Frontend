@@ -324,7 +324,6 @@ export default function ContabilidadeForm() {
         justifyContent: "center"
       }}
       onClick={() => setShowDeleteModal(true)}
-      disabled={!id}
     >
       Excluir
     </button>
