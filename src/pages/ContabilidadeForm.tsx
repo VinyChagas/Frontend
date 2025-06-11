@@ -176,6 +176,9 @@ export default function ContabilidadeForm() {
         </div>
        <form onSubmit={handleSubmit} autoComplete="off">
 
+        
+
+
   {/* Linha 1: Nome, CNPJ, Email */}
   <div style={{ display: "flex", gap: "1rem", marginBottom: "0.7rem" }}>
     <label style={{ flex: 2 }}>
@@ -333,74 +336,75 @@ export default function ContabilidadeForm() {
     </div>
   </div>
   {/* Modal de confirmação de exclusão */}
-  {showDeleteModal && (
+{showDeleteModal && (
+  <div
+    style={{
+      position: "fixed",
+      inset: 0,
+      background: "rgba(30,41,59,0.45)",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      zIndex: 99999,
+    }}
+  >
     <div
       style={{
-        position: "fixed",
-        inset: 0,
-        background: "rgba(30,41,59,0.45)",
+        background: "#fff",
+        color: "#222",
+        padding: "2rem 2.5rem",
+        borderRadius: "18px",
+        boxShadow: "0 8px 32px rgba(30,41,59,0.18)",
         display: "flex",
+        flexDirection: "column",
         alignItems: "center",
-        justifyContent: "center",
-        zIndex: 99999,
+        gap: "1.2rem",
+        minWidth: "260px",
+        fontSize: "1.15rem",
+        fontWeight: 500,
       }}
     >
-      <div
-        style={{
-          background: "#fff",
-          color: "#222",
-          padding: "2rem 2.5rem",
-          borderRadius: "18px",
-          boxShadow: "0 8px 32px rgba(30,41,59,0.18)",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: "1.2rem",
-          minWidth: "260px",
-          fontSize: "1.15rem",
-          fontWeight: 500,
-        }}
-      >
-        <span>Tem certeza que deseja excluir esta empresa?</span>
-        <div style={{ display: "flex", gap: "1.2rem" }}>
-          <button
-            style={{
-              background: "#dc2626",
-              color: "#fff",
-              border: "none",
-              borderRadius: "8px",
-              padding: "0.6rem 1.5rem",
-              fontSize: "1rem",
-              fontWeight: 600,
-              cursor: "pointer",
-              transition: "background 0.18s",
-            }}
-            type="button"
-            onClick={handleDelete}
-          >
-            Excluir
-          </button>
-          <button
-            style={{
-              background: "#e5e7eb",
-              color: "#222",
-              border: "none",
-              borderRadius: "8px",
-              padding: "0.6rem 1.5rem",
-              fontSize: "1rem",
-              fontWeight: 600,
-              cursor: "pointer",
-              transition: "background 0.18s",
-            }}
-            type="button"
-            onClick={() => setShowDeleteModal(false)}
-          >
-            Cancelar
-          </button>
-        </div>
+      <span>Tem certeza que deseja excluir esta empresa?</span>
+      <div style={{ display: "flex", gap: "1.2rem" }}>
+        <button
+          type="button"
+          onClick={handleDelete}
+          style={{
+            background: "#dc2626",
+            color: "#fff",
+            border: "none",
+            borderRadius: "8px",
+            padding: "0.6rem 1.5rem",
+            fontSize: "1rem",
+            fontWeight: 600,
+            cursor: "pointer",
+            transition: "background 0.18s",
+          }}
+        >
+          Excluir
+        </button>
+        <button
+          type="button"
+          onClick={() => setShowDeleteModal(false)}
+          style={{
+            background: "#e5e7eb",
+            color: "#222",
+            border: "none",
+            borderRadius: "8px",
+            padding: "0.6rem 1.5rem",
+            fontSize: "1rem",
+            fontWeight: 600,
+            cursor: "pointer",
+            transition: "background 0.18s",
+          }}
+        >
+          Cancelar
+        </button>
       </div>
     </div>
-  )}
+  </div>
+)}
+
 </form>
       </div>
     </div>
