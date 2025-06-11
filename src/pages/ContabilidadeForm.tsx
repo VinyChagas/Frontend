@@ -93,83 +93,215 @@ export default function ContabilidadeForm() {
       <div className="form-container">
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.2rem" }}>
           <h2 style={{ margin: 0, fontSize: "1.35rem", fontWeight: 700 }}>Dados Cadastrais</h2>
-          <button
-            type="button"
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "0.5rem",
-              background: "linear-gradient(90deg, #2563eb 60%, #38bdf8 100%)",
-              color: "#fff",
-              fontWeight: 700,
-              fontSize: "1.01rem",
-              border: "none",
-              borderRadius: "8px",
-              padding: "0.6rem 1.2rem",
-              cursor: "pointer",
-              boxShadow: "0 4px 16px rgba(56,189,248,0.13)",
-            }}
-          >
-            <UploadSimple size={18} /> Importar CNPJ
-          </button>
-        </div>
-        <form onSubmit={handleSubmit} autoComplete="off">
-          <div style={{ display: "flex", gap: "1rem", marginBottom: "0.7rem" }}>
-            <label style={{ flex: 2 }}>
-              Nome da empresa:
-              <input type="text" name="nome" value={form.nome} onChange={handleChange} required maxLength={80} className="input-form" />
-            </label>
-            <label style={{ flex: 1.2 }}>
-              CNPJ:
-              <input type="text" name="cnpj" value={form.cnpj} onChange={handleChange} required maxLength={18} className={`input-form${erros.cnpj ? " input-error" : ""}`} placeholder="00.000.000/0000-00" />
-              {erros.cnpj && <span className="error-message">{erros.cnpj}</span>}
-            </label>
-            <label style={{ flex: 2 }}>
-              Email:
-              <input type="email" name="email" value={form.email} onChange={handleChange} required maxLength={100} className="input-form" />
-            </label>
-          </div>
-          <div style={{ display: "flex", gap: "1rem", marginBottom: "0.7rem" }}>
-            <label style={{ flex: 2 }}>
-              Endereço:
-              <input type="text" name="endereco" value={form.endereco} onChange={handleChange} required maxLength={120} className="input-form" />
-            </label>
-            <label style={{ flex: 1 }}>
-              Número de contato:
-              <input type="text" name="telefone" value={form.telefone} onChange={handleChange} required maxLength={15} className={`input-form${erros.telefone ? " input-error" : ""}`} placeholder="(99) 99999-9999" />
-              {erros.telefone && <span className="error-message">{erros.telefone}</span>}
-            </label>
-          </div>
-          <div style={{ display: "flex", gap: "1rem", marginBottom: "0.7rem" }}>
-            <label style={{ flex: 1 }}>
-              Login:
-              <input type="text" name="login" value={form.login} onChange={handleChange} required maxLength={32} className="input-form" />
-            </label>
-            <label className="senha-label" style={{ flex: 1 }}>
-              Senha:
-              <div className="senha-input-wrapper">
-                <input type={showSenha ? "text" : "password"} name="senha" value={form.senha} onChange={handleChange} required maxLength={32} className={`input-form${erros.senha ? " input-error" : ""}`} />
-                <button type="button" tabIndex={-1} className="senha-eye-btn" onClick={() => setShowSenha((v) => !v)} aria-label={showSenha ? "Ocultar senha" : "Mostrar senha"}>
-                  {showSenha ? <EyeSlash size={20} /> : <Eye size={20} />}
-                </button>
-              </div>
-              {erros.senha && <span className="error-message">{erros.senha}</span>}
-            </label>
-            <label style={{ flex: 0.7 }}>
-              Nº clientes:
-              <input type="number" name="clientes" value={form.clientes} onChange={handleChange} min={0} required max={9999} className="input-form" />
-            </label>
-          </div>
-          <div className="form-actions-row">
-            <button type="button" className="importar-logo-btn">
-              <UploadSimple size={15} /> Importar Logo
+            <input
+              type="file"
+              accept="application/pdf"
+              id="input-cnpj"
+              style={{ display: "none" }}
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+
+                const formData = new FormData();
+                formData.append("cnpjFile", file);
+
+                try {
+                  console.log("Enviando PDF para processamento...");
+                  const response = await fetch("http://localhost:4000/api/upload-cnpj", {
+                    method: "POST",
+                    body: formData,
+                  });
+
+                  if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.erro || `Erro HTTP: ${response.status}`);
+                  }
+
+                  const dados = await response.json();
+                  console.log("Dados recebidos do backend:", dados);
+
+                  // Atualiza apenas os campos relevantes
+                  setForm(prev => ({
+                    ...prev,
+                    nome: dados.nome || prev.nome,
+                    cnpj: dados.cnpj || prev.cnpj,
+                    endereco: dados.endereco || prev.endereco,
+                    telefone: dados.telefone || prev.telefone,
+                    email: dados.email || prev.email,
+                  }));
+                  
+                  alert("Dados importados com sucesso!");
+                } catch (err) {
+                  console.error("Erro no processamento do PDF:", err);
+                  alert(`Falha: ${err instanceof Error ? err.message : err}`);
+                } finally {
+                  e.target.value = '';
+                }
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => document.getElementById("input-cnpj")?.click()}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "0.5rem",
+                background: "linear-gradient(90deg, #2563eb 60%, #38bdf8 100%)",
+                color: "#fff",
+                fontWeight: 700,
+                fontSize: "1.01rem",
+                border: "none",
+                borderRadius: "8px",
+                padding: "0.6rem 1.2rem",
+                cursor: "pointer",
+                boxShadow: "0 4px 16px rgba(56,189,248,0.13)",
+              }}
+            >
+              <UploadSimple size={18} /> Importar CNPJ
             </button>
-            <div style={{ display: "flex", gap: "1rem" }}>
-              <button type="submit">Salvar</button>
-              <button type="button" onClick={() => navigate("/contabilidades")}>Cancelar</button>
-            </div>
-          </div>
-        </form>
+        </div>
+       <form onSubmit={handleSubmit} autoComplete="off">
+
+  {/* Linha 1: Nome, CNPJ, Email */}
+  <div style={{ display: "flex", gap: "1rem", marginBottom: "0.7rem" }}>
+    <label style={{ flex: 2 }}>
+      Nome da empresa:
+      <input
+        type="text"
+        name="nome"
+        value={form.nome}
+        onChange={handleChange}
+        required
+        maxLength={80}
+        className="input-form"
+      />
+    </label>
+    <label style={{ flex: 1.2 }}>
+      CNPJ:
+      <input
+        type="text"
+        name="cnpj"
+        value={form.cnpj}
+        onChange={handleChange}
+        required
+        maxLength={18}
+        className={`input-form${erros.cnpj ? " input-error" : ""}`}
+        placeholder="00.000.000/0000-00"
+      />
+      {erros.cnpj && <span className="error-message">{erros.cnpj}</span>}
+    </label>
+    <label style={{ flex: 2 }}>
+      Email:
+      <input
+        type="email"
+        name="email"
+        value={form.email}
+        onChange={handleChange}
+        required
+        maxLength={100}
+        className="input-form"
+      />
+    </label>
+  </div>
+
+  {/* Linha 2: Endereço, Telefone */}
+  <div style={{ display: "flex", gap: "1rem", marginBottom: "0.7rem" }}>
+    <label style={{ flex: 2 }}>
+      Endereço:
+      <input
+        type="text"
+        name="endereco"
+        value={form.endereco}
+        onChange={handleChange}
+        required
+        maxLength={120}
+        className="input-form"
+      />
+    </label>
+    <label style={{ flex: 1 }}>
+      Número de contato:
+      <input
+        type="text"
+        name="telefone"
+        value={form.telefone}
+        onChange={handleChange}
+        required
+        maxLength={15}
+        className={`input-form${erros.telefone ? " input-error" : ""}`}
+        placeholder="(99) 99999-9999"
+      />
+      {erros.telefone && <span className="error-message">{erros.telefone}</span>}
+    </label>
+  </div>
+
+  {/* Linha 3: Login, Senha, Clientes */}
+  <div style={{ display: "flex", gap: "1rem", marginBottom: "0.7rem" }}>
+    <label style={{ flex: 1 }}>
+      Login:
+      <input
+        type="text"
+        name="login"
+        value={form.login}
+        onChange={handleChange}
+        required
+        maxLength={32}
+        className="input-form"
+      />
+    </label>
+    <label className="senha-label" style={{ flex: 1 }}>
+      Senha:
+      <div className="senha-input-wrapper">
+        <input
+          type={showSenha ? "text" : "password"}
+          name="senha"
+          value={form.senha}
+          onChange={handleChange}
+          required
+          maxLength={32}
+          className={`input-form${erros.senha ? " input-error" : ""}`}
+        />
+        <button
+          type="button"
+          tabIndex={-1}
+          className="senha-eye-btn"
+          onClick={() => setShowSenha((v) => !v)}
+          aria-label={showSenha ? "Ocultar senha" : "Mostrar senha"}
+        >
+          {showSenha ? <EyeSlash size={20} /> : <Eye size={20} />}
+        </button>
+      </div>
+      {erros.senha && <span className="error-message">{erros.senha}</span>}
+    </label>
+    <label style={{ flex: 0.7 }}>
+      Nº clientes:
+      <input
+        type="number"
+        name="clientes"
+        value={form.clientes}
+        onChange={handleChange}
+        min={0}
+        required
+        max={9999}
+        className="input-form"
+      />
+    </label>
+  </div>
+
+  {/* Botões finais */}
+  <div className="form-actions-row">
+    <button
+      type="button"
+      className="importar-logo-btn"
+      onClick={() => document.getElementById("input-cnpj")?.click()}
+    >
+      <UploadSimple size={15} /> Importar CNPJ
+    </button>
+    <div style={{ display: "flex", gap: "1rem" }}>
+      <button type="submit">Salvar</button>
+      <button type="button" onClick={() => navigate("/contabilidades")}>Cancelar</button>
+    </div>
+  </div>
+</form>
       </div>
     </div>
   );
