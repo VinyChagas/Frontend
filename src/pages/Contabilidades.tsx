@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import "../styles/Contabilidades.scss";
 
@@ -10,44 +11,26 @@ type Empresa = {
   logoUrl?: string;
 };
 
-const empresasMock: Empresa[] = [
-  {
-    id: 1,
-    nome: "SCS Contabilidade",
-    cnpj: "12.345.678/0001-90",
-    clientes: 18,
-    logoUrl: "",
-  },
-  {
-    id: 2,
-    nome: "ABC Consultoria",
-    cnpj: "98.765.432/0001-10",
-    clientes: 7,
-    logoUrl: "",
-  },
-  {
-    id: 3,
-    nome: "XYZ Financeiro",
-    cnpj: "11.222.333/0001-44",
-    clientes: 3,
-    logoUrl: "",
-  },
-];
-
 export default function Contabilidades() {
+  const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [busca, setBusca] = useState("");
   const navigate = useNavigate();
 
+  useEffect(() => {
+    axios.get("http://localhost:4000/empresas")
+      .then(res => setEmpresas(res.data))
+      .catch(err => {
+        console.error("Erro ao buscar empresas", err);
+        setEmpresas([]);
+      });
+  }, []);
+
   const termo = busca.trim().toLowerCase();
-  const empresasFiltradas = empresasMock.filter((e) => {
+  const empresasFiltradas = empresas.filter((e) => {
     if (!termo) return true;
     const textoBusca = `${e.nome} ${e.cnpj}`.toLowerCase();
-    const textoBuscaSemAcento = textoBusca
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "");
-    const termoSemAcento = termo
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "");
+    const textoBuscaSemAcento = textoBusca.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    const termoSemAcento = termo.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
     return textoBuscaSemAcento.includes(termoSemAcento);
   });
 
