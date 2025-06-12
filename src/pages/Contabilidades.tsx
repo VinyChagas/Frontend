@@ -11,6 +11,13 @@ type Empresa = {
   logoUrl?: string;
 };
 
+// Função utilitária para formatar CNPJ na listagem
+function formatCNPJ(cnpj: string) {
+  const digits = cnpj.replace(/\D/g, "").slice(0, 14);
+  if (digits.length !== 14) return cnpj;
+  return `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(5, 8)}/${digits.slice(8, 12)}-${digits.slice(12, 14)}`;
+}
+
 export default function Contabilidades() {
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [busca, setBusca] = useState("");
@@ -70,7 +77,9 @@ export default function Contabilidades() {
             </div>
             <div className="contabilidades-info">
               <div className="contabilidades-nome">{empresa.nome}</div>
-              <div className="contabilidades-cnpj">{empresa.cnpj}</div>
+              <div className="contabilidades-cnpj">
+                {formatCNPJ(empresa.cnpj)}
+              </div>
             </div>
             <div className="contabilidades-clientes">
               <span>{empresa.clientes}</span>
@@ -78,7 +87,7 @@ export default function Contabilidades() {
             </div>
             <button
               className="contabilidades-editar-btn"
-              onClick={() => navigate(`/contabilidades/${empresa.id}`)} // ← esse id vai ser usado pelo form
+              onClick={() => navigate(`/contabilidades/${empresa.id}`)}
             >
               Editar
             </button>
