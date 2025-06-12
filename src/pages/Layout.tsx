@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from "react";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
-import { User, House, FileText, FileSearch, Users, PiggyBank, LogOut, KeyRound, ChevronDown, Eye } from "lucide-react";
+import { User, House, FileText, FileSearch, Users, PiggyBank, LogOut, KeyRound, ChevronDown, Eye, CheckCircle } from "lucide-react";
 import "../styles/Home.scss";
+import "../styles/Layout.scss"; // Adicione um novo arquivo para estilos do layout
 
 const SIDEBAR_ITEMS = [
   { label: "Dashboard", icon: <House size={20} />, route: "/home" },
@@ -21,6 +22,10 @@ export default function Layout() {
   const [senhaNovaRep, setSenhaNovaRep] = useState("");
   const [erroSenha, setErroSenha] = useState("");
   const [showSenha, setShowSenha] = useState(false);
+  const [showSenhaRep, setShowSenhaRep] = useState(false);
+  const [showSenhaAtual, setShowSenhaAtual] = useState(false); // novo estado para senha atual
+  const [showLoading, setShowLoading] = useState(false);
+  const [showSuccess, setShowSuccess] = useState<null | string>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const senhaNovaInputRef = useRef<HTMLInputElement>(null);
 
@@ -68,8 +73,17 @@ export default function Layout() {
   }
 
   function senhaRepFeedback(s1: string, s2: string): string {
-    if (s1.length < 6 || s2.length < 6) return "";
-    if (s1 !== s2) return "As senhas não conferem";
+    const min = 8;
+    const max = 12;
+    const faltando: string[] = [];
+    if (s2.length < min) faltando.push("mínimo 8 caracteres");
+    if (s2.length > max) faltando.push("máximo 12 caracteres");
+    if (!/[A-Z]/.test(s2)) faltando.push("letra maiúscula");
+    if (!/[a-z]/.test(s2)) faltando.push("letra minúscula");
+    if (!/\d/.test(s2)) faltando.push("número");
+    if (!/[!@#$%^&*()_\-+=\[\]{};':\"\\|,.<>/?`~]/.test(s2)) faltando.push("caractere especial");
+    if (faltando.length > 0) return "Faltando: " + faltando.join(", ");
+    if (s1 !== s2) return "As senhas devem ser iguais";
     return "";
   }
 
@@ -88,12 +102,17 @@ export default function Layout() {
       return;
     }
     // Aqui você faria a chamada para alterar a senha no backend
-    setShowSenhaModal(false);
-    setSenhaAtual("");
-    setSenhaNova("");
-    setSenhaNovaRep("");
-    setErroSenha("");
-    alert("Senha alterada com sucesso!");
+    setShowLoading(true);
+    setShowSuccess("Senha alterada com sucesso!");
+    setTimeout(() => {
+      setShowLoading(false);
+      setShowSuccess(null);
+      setShowSenhaModal(false);
+      setSenhaAtual("");
+      setSenhaNova("");
+      setSenhaNovaRep("");
+      setErroSenha("");
+    }, 2500);
   }
 
   return (
@@ -166,178 +185,174 @@ export default function Layout() {
         </header>
         {/* Modal de alteração de senha */}
         {showSenhaModal && (
-          <div
-            style={{
-              position: "fixed",
-              inset: 0,
-              background: "rgba(30,41,59,0.45)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              zIndex: 99999,
-            }}
-          >
-            <div
-              style={{
-                background: "#fff",
-                color: "#222",
-                padding: "2.2rem 2.5rem",
-                borderRadius: "18px",
-                boxShadow: "0 8px 32px rgba(30,41,59,0.18)",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                gap: "1.1rem",
-                minWidth: "320px",
-                fontSize: "1.08rem",
-                fontWeight: 500,
-              }}
-            >
-              <span style={{ fontWeight: 700, fontSize: "1.18rem" }}>Alterar Senha</span>
-              <input
-                type="password"
-                placeholder="Senha atual"
-                value={senhaAtual}
-                onChange={e => setSenhaAtual(e.target.value)}
-                style={{
-                  width: "100%",
-                  padding: "0.8rem 1rem",
-                  borderRadius: "8px",
-                  border: "1.5px solid #cbd5e1",
-                  background: "#f6f7fa",
-                  fontSize: "1.08rem",
-                  marginBottom: "0.2rem"
-                }}
-                autoFocus
-              />
-              <div style={{ position: "relative", width: "100%" }}>
-                <input
-                  type={showSenha ? "text" : "password"}
-                  placeholder="Nova senha"
-                  value={senhaNova}
-                  ref={senhaNovaInputRef}
-                  onChange={e => {
-                    setSenhaNova(e.target.value);
-                    setErroSenha("");
-                  }}
-                  style={{
-                    width: "100%",
-                    padding: "0.8rem 1rem",
-                    borderRadius: "8px",
-                    border: "1.5px solid #cbd5e1",
-                    background: "#f6f7fa",
-                    fontSize: "1.08rem",
-                    marginBottom: "0.2rem"
-                  }}
-                />
-                <button
-                  type="button"
-                  tabIndex={-1}
-                  style={{
-                    position: "absolute",
-                    right: "1.2rem",
-                    top: "50%",
-                    transform: "translateY(-50%)",
-                    background: "none",
-                    border: "none",
-                    outline: "none",
-                    cursor: "pointer",
-                    color: "#64748b",
-                    padding: 0,
-                    display: "flex",
-                    alignItems: "center"
-                  }}
-                  onClick={() => setShowSenha((v) => !v)}
-                  aria-label={showSenha ? "Ocultar senha" : "Mostrar senha"}
-                >
-                  {showSenha
-                    ? <Eye size={20} style={{ opacity: 0.4, transform: "scaleX(-1)" }} />
-                    : <Eye size={20} />}
-                </button>
-              </div>
-              {senhaNova.length >= 6 && senhaFeedback(senhaNova) && (
-                <span style={{ color: "#ef4444", fontSize: "0.97rem", fontWeight: 600 }}>
-                  {senhaFeedback(senhaNova)}
-                </span>
-              )}
-              <input
-                type="password"
-                placeholder="Repetir nova senha"
-                value={senhaNovaRep}
-                onChange={e => {
-                  setSenhaNovaRep(e.target.value);
-                  setErroSenha("");
-                }}
-                style={{
-                  width: "100%",
-                  padding: "0.8rem 1rem",
-                  borderRadius: "8px",
-                  border: "1.5px solid #cbd5e1",
-                  background: "#f6f7fa",
-                  fontSize: "1.08rem",
-                  marginBottom: "0.2rem"
-                }}
-              />
-              {senhaNova.length >= 6 && senhaNovaRep.length >= 6 && senhaRepFeedback(senhaNova, senhaNovaRep) && (
-                <span style={{ color: "#ef4444", fontSize: "0.97rem", fontWeight: 600 }}>
-                  {senhaRepFeedback(senhaNova, senhaNovaRep)}
-                </span>
-              )}
-              {erroSenha && (
-                <span style={{ color: "#ef4444", fontSize: "0.97rem", fontWeight: 600 }}>
-                  {erroSenha}
-                </span>
-              )}
-              <div style={{ display: "flex", gap: "1.1rem", marginTop: "0.7rem" }}>
-                <button
-                  type="button"
-                  style={{
-                    background: "linear-gradient(90deg, #2563eb 60%, #38bdf8 100%)",
-                    color: "#fff",
-                    fontWeight: 700,
-                    fontSize: "1.01rem",
-                    border: "none",
-                    borderRadius: "8px",
-                    padding: "0.6rem 1.2rem",
-                    cursor: "pointer",
-                    boxShadow: "0 4px 16px rgba(56,189,248,0.13)",
-                    minWidth: "110px"
-                  }}
-                  onClick={handleAlterarSenha}
-                >
-                  Salvar
-                </button>
-                <button
-                  type="button"
-                  style={{
-                    background: "#e5e7eb",
-                    color: "#222",
-                    border: "none",
-                    borderRadius: "8px",
-                    padding: "0.6rem 1.2rem",
-                    fontWeight: 700,
-                    fontSize: "1.01rem",
-                    cursor: "pointer",
-                    minWidth: "110px"
-                  }}
-                  onClick={() => {
-                    setShowSenhaModal(false);
-                    setSenhaAtual("");
-                    setSenhaNova("");
-                    setSenhaNovaRep("");
-                    setErroSenha("");
-                  }}
-                >
-                  Cancelar
-                </button>
-              </div>
-              
+          <div className="senha-modal-bg">
+            <div className="senha-modal">
+              <span className="senha-modal-title">Alterar Senha</span>
+              <form
+                className="senha-modal-form"
+                onSubmit={e => { e.preventDefault(); handleAlterarSenha(); }}
+                autoComplete="off"
+              >
+                <label className="senha-modal-label">
+                  Senha atual:
+                  <div className="senha-modal-input-wrapper">
+                    <input
+                      type={showSenhaAtual ? "text" : "password"}
+                      placeholder="Senha atual"
+                      value={senhaAtual}
+                      onChange={e => setSenhaAtual(e.target.value)}
+                      className="senha-modal-input"
+                      autoFocus
+                    />
+                    <button
+                      type="button"
+                      tabIndex={-1}
+                      className="senha-modal-eye-btn"
+                      onClick={() => setShowSenhaAtual((v) => !v)}
+                      aria-label={showSenhaAtual ? "Ocultar senha" : "Mostrar senha"}
+                    >
+                      {showSenhaAtual
+                        ? <Eye size={18} style={{ opacity: 0.4, transform: "scaleX(-1)" }} />
+                        : <Eye size={18} />}
+                    </button>
+                  </div>
+                </label>
+                <label className="senha-modal-label">
+                  Nova senha:
+                  <div className="senha-modal-input-wrapper">
+                    <input
+                      type={showSenha ? "text" : "password"}
+                      placeholder="Nova senha"
+                      value={senhaNova}
+                      ref={senhaNovaInputRef}
+                      onChange={e => {
+                        setSenhaNova(e.target.value);
+                        setErroSenha("");
+                      }}
+                      className="senha-modal-input"
+                    />
+                    <button
+                      type="button"
+                      tabIndex={-1}
+                      className="senha-modal-eye-btn"
+                      onClick={() => setShowSenha((v) => !v)}
+                      aria-label={showSenha ? "Ocultar senha" : "Mostrar senha"}
+                    >
+                      {showSenha
+                        ? <Eye size={18} style={{ opacity: 0.4, transform: "scaleX(-1)" }} />
+                        : <Eye size={18} />}
+                    </button>
+                  </div>
+                </label>
+                <label className="senha-modal-label">
+                  Repetir nova senha:
+                  <div className="senha-modal-input-wrapper">
+                    <input
+                      type={showSenhaRep ? "text" : "password"}
+                      placeholder="Repetir nova senha"
+                      value={senhaNovaRep}
+                      onChange={e => {
+                        setSenhaNovaRep(e.target.value);
+                        setErroSenha("");
+                      }}
+                      className="senha-modal-input"
+                    />
+                    <button
+                      type="button"
+                      tabIndex={-1}
+                      className="senha-modal-eye-btn"
+                      onClick={() => setShowSenhaRep((v) => !v)}
+                      aria-label={showSenhaRep ? "Ocultar senha" : "Mostrar senha"}
+                    >
+                      {showSenhaRep
+                        ? <Eye size={18} style={{ opacity: 0.4, transform: "scaleX(-1)" }} />
+                        : <Eye size={18} />}
+                    </button>
+                  </div>
+                </label>
+                {senhaNova.length >= 6 && senhaFeedback(senhaNova) && (
+                  <span className="senha-modal-error">
+                    {senhaFeedback(senhaNova)}
+                  </span>
+                )}
+                {senhaNovaRep.length >= 6 && senhaRepFeedback(senhaNova, senhaNovaRep) && (
+                  <span className="senha-modal-error">
+                    {senhaRepFeedback(senhaNova, senhaNovaRep)}
+                  </span>
+                )}
+                {erroSenha && (
+                  <span className="senha-modal-error">
+                    {erroSenha}
+                  </span>
+                )}
+                <div className="senha-modal-actions">
+                  <button
+                    type="submit"
+                    className="senha-modal-btn salvar"
+                  >
+                    Salvar
+                  </button>
+                  <button
+                    type="button"
+                    className="senha-modal-btn cancelar"
+                    onClick={() => {
+                      setShowSenhaModal(false);
+                      setSenhaAtual("");
+                      setSenhaNova("");
+                      setSenhaNovaRep("");
+                      setErroSenha("");
+                    }}
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </form>
             </div>
-                  
           </div>
-          
         )}
         
+        {showSuccess && (
+          <div className="contabilidade-success-card">
+            <div className="contabilidade-success-inner">
+              <CheckCircle size={28} style={{ flexShrink: 0 }} />
+              <span>{showSuccess}</span>
+            </div>
+            <style>
+              {`
+                @keyframes slideUpDown {
+                  0% {
+                    opacity: 0;
+                    transform: translateY(40px);
+                  }
+                  10% {
+                    opacity: 1;
+                    transform: translateY(0);
+                  }
+                  90% {
+                    opacity: 1;
+                    transform: translateY(0);
+                  }
+                  100% {
+                    opacity: 0;
+                    transform: translateY(40px);
+                  }
+                }
+                @keyframes spin {
+                  0% { transform: rotate(0deg);}
+                  100% { transform: rotate(360deg);}
+                }
+              `}
+            </style>
+          </div>
+        )}
+        {showLoading && (
+          <div className="contabilidade-loading-bg">
+            <div className="contabilidade-loading-modal">
+              <div className="contabilidade-loading-spinner" />
+              <span className="contabilidade-loading-text">Carregando...</span>
+            </div>
+          </div>
+        )}
         <main className="content">
           <Outlet />
         </main>

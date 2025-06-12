@@ -33,7 +33,7 @@ export default function Home() {
           <div className="home-card-divider" />
           <div className="home-card-indicators">
             <div className="home-card-indicator">
-              <span className="home-card-indicator-label">Empresas</span>
+              <span className="home-card-indicator-label">Clientes</span>
               <div className="home-card-indicator-value home-card-indicator-value--wide" />
             </div>
             <div className="home-card-indicator">

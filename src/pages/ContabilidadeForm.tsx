@@ -2,6 +2,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { Eye, UploadSimple, CheckCircle } from "@phosphor-icons/react";
 import "../styles/Contabilidades.scss";
+import "../styles/ContabilidadeForm.scss"; // novo SCSS para detalhes visuais
 import axios from "axios";
 
 // Tipo da empresa
@@ -517,31 +518,8 @@ export default function ContabilidadeForm() {
           )}
           {/* Card de sucesso no canto esquerdo */}
           {showSuccess && (
-            <div
-              style={{
-                position: "fixed",
-                left: 24,
-                bottom: 32,
-                zIndex: 1000000, // maior que o loading
-                pointerEvents: "none",
-                animation: "slideUpDown 3.5s cubic-bezier(.4,0,.2,1)"
-              }}
-            >
-              <div
-                style={{
-                  background: "linear-gradient(90deg, #22c55e 60%, #16a34a 100%)", // verde
-                  color: "#fff",
-                  padding: "1.2rem 2rem",
-                  borderRadius: "14px",
-                  boxShadow: "0 8px 32px rgba(30,41,59,0.18)",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "1.1rem",
-                  minWidth: "260px",
-                  fontSize: "1.13rem",
-                  fontWeight: 600,
-                }}
-              >
+            <div className="contabilidade-success-card">
+              <div className="contabilidade-success-inner">
                 <CheckCircle size={28} weight="fill" color="#fff" style={{ flexShrink: 0 }} />
                 <span>{showSuccess}</span>
               </div>
@@ -565,60 +543,21 @@ export default function ContabilidadeForm() {
                       transform: translateY(40px);
                     }
                   }
-                `}
-              </style>
-            </div>
-          )}
-          {/* Tela de carregamento sobreposta enquanto a notificação aparece */}
-          {showLoading && (
-            <div
-              style={{
-                position: "fixed",
-                inset: 0,
-                background: "rgba(30,41,59,0.38)",
-                zIndex: 999999,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                transition: "opacity 0.3s"
-              }}
-            >
-              <div
-                style={{
-                  background: "#fff",
-                  padding: "2.2rem 2.5rem",
-                  borderRadius: "18px",
-                  boxShadow: "0 8px 32px rgba(30,41,59,0.18)",
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  gap: "1.1rem",
-                  minWidth: "220px",
-                  fontSize: "1.15rem",
-                  fontWeight: 600,
-                }}
-              >
-                <div
-                  style={{
-                    width: 48,
-                    height: 48,
-                    border: "4px solid #2563eb", // azul
-                    borderTop: "4px solid #e5e7eb",
-                    borderRadius: "50%",
-                    animation: "spin 1s linear infinite",
-                    marginBottom: "1.1rem"
-                  }}
-                />
-                <span style={{ color: "#2563eb" }}>Carregando...</span>
-              </div>
-              <style>
-                {`
                   @keyframes spin {
                     0% { transform: rotate(0deg);}
                     100% { transform: rotate(360deg);}
                   }
                 `}
               </style>
+            </div>
+          )}
+          {/* Tela de carregamento sobreposta enquanto a notificação aparece */}
+          {showLoading && (
+            <div className="contabilidade-loading-bg">
+              <div className="contabilidade-loading-modal">
+                <div className="contabilidade-loading-spinner" />
+                <span className="contabilidade-loading-text">Carregando...</span>
+              </div>
             </div>
           )}
         </form>
