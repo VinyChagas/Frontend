@@ -1,0 +1,506 @@
+// Estrutura para sidebar expansível e header fixo
+
+.layout {
+  height: 100vh;
+  width: 100vw;
+  display: flex;
+  background: #f8fafc;
+  overflow: hidden; // impede scroll global
+}
+
+// Sidebar fixa
+.sidebar {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 60px;
+  min-width: 60px;
+  max-width: 220px;
+  height: 100vh;
+  background: #1e293b;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  transition: width 0.5s cubic-bezier(.4,0,.2,1), box-shadow 0.22s;
+  box-shadow: 2px 0 8px rgba(30,41,59,0.07);
+  z-index: 200;
+  overflow: visible;
+
+  .sidebar-menu {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0.5rem 0 0 0;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    .sidebar-section {
+      margin-bottom: 1.2rem;
+      ul {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        li {
+          display: flex;
+          align-items: center;
+          width: 100%;
+          border-radius: 8px;
+          cursor: pointer;
+          transition:
+            background 0.18s,
+            color 0.18s,
+            padding 0.4s cubic-bezier(.4,0,.2,1);
+          padding: 0.35rem 0; // Espaçamento vertical menor
+          position: relative;
+
+          .sidebar-icon {
+            min-width: 60px;
+            width: 60px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: color 0.18s;
+            font-size: 1.25rem;
+          }
+
+          .sidebar-label {
+            display: inline-block;
+            max-width: 0;
+            opacity: 0;
+            overflow: hidden;
+            white-space: nowrap;
+            transition:
+              max-width 0.5s cubic-bezier(.4,0,.2,1),
+              opacity 0.3s cubic-bezier(.4,0,.2,1),
+              margin-left 0.4s cubic-bezier(.4,0,.2,1);
+            margin-left: 0;
+            font-size: 1.08rem;
+            font-weight: 600;
+            color: #e2e8f0;
+            pointer-events: none;
+          }
+
+          &:hover, &.active {
+            background: #334155;
+            color: #38bdf8;
+            .sidebar-icon {
+              color: #38bdf8;
+            }
+            .sidebar-label {
+              color: #38bdf8;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  &:hover {
+    width: 220px;
+    box-shadow: 4px 0 24px 0 rgba(30,41,59,0.13);
+    .sidebar-menu ul {
+      align-items: flex-start !important;
+    }
+    .sidebar-menu li {
+      .sidebar-icon {
+        min-width: 60px;
+        width: 60px;
+        justify-content: center;
+        margin-right: 0;
+      }
+      .sidebar-label {
+        display: inline-block !important;
+        max-width: 140px !important;
+        opacity: 1 !important;
+        margin-left: 0.7rem !important;
+        pointer-events: auto !important;
+        overflow: visible !important;
+      }
+    }
+  }
+
+  .sidebar-label {
+    max-width: 0;
+    opacity: 0;
+    margin-left: 0;
+    transition:
+      max-width 0.5s cubic-bezier(.4,0,.2,1),
+      opacity 0.3s cubic-bezier(.4,0,.2,1),
+      margin-left 0.4s cubic-bezier(.4,0,.2,1);
+    pointer-events: none;
+    overflow: hidden;
+  }
+  .sidebar-section-title {
+    display: none !important;
+  }
+  .sidebar-version {
+    display: none !important;
+  }
+  .sidebar-top {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    height: 48px;
+    padding: 0 0.5rem;
+    border-bottom: 1px solid #334155;
+    background: transparent;
+  }
+}
+
+.sidebar:hover,
+.sidebar.expanded {
+  width: 220px;
+  box-shadow: 4px 0 24px 0 rgba(30,41,59,0.13);
+}
+
+// Main area NÃO deve mais ter margin-left dinâmica
+.main {
+  margin-left: 60px; // sempre o tamanho fechado
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  position: relative;
+  height: 100vh;
+  transition: none; // remove transição de margin-left
+}
+
+// Header fixa no topo da área principal
+.header {
+  position: sticky;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 49px;
+  background: #fff;
+  color: #222;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 2px 8px rgba(30,41,59,0.07);
+  padding: 0 2rem 0 0.5rem;
+  z-index: 100;
+}
+
+// Conteúdo principal scrollável
+.content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 2.5rem 2.5rem 2.5rem 2.5rem;
+  background: #f8fafc;
+  min-height: 0;
+  min-width: 0;
+  height: calc(100vh - 49px); // ocupa o espaço abaixo do header
+}
+
+// Profile menu
+.profile-menu-wrapper {
+  position: relative;
+}
+
+.profile-menu-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 1.01em;
+  background: none;
+  border: none;
+  color: #334155;
+  cursor: pointer;
+  padding: 0.4rem 0.7rem;
+  border-radius: 8px;
+  transition: background 0.15s, color 0.15s;
+  &:hover {
+    background: #e0f2fe;
+    color: #2563eb;
+  }
+}
+
+.profile-menu-username {
+  font-weight: 600;
+  font-size: 1.01em;
+}
+
+.profile-menu-chevron {
+  margin-left: 4px;
+  transition: transform 0.2s;
+  &.open {
+    transform: rotate(180deg);
+  }
+}
+
+.profile-dropdown {
+  position: absolute;
+  top: 110%;
+  right: 0;
+  min-width: 220px;
+  background: #fff;
+  box-shadow: 0 4px 16px rgba(30,41,59,0.13);
+  border-radius: 8px;
+  padding: 0.5rem 0;
+  z-index: 999;
+  color: #222;
+  animation: fadeInProfileDropdown 0.18s;
+}
+
+@keyframes fadeInProfileDropdown {
+  from { opacity: 0; transform: translateY(-8px);}
+  to { opacity: 1; transform: translateY(0);}
+}
+
+.profile-dropdown-user {
+  padding: 0.7rem 1.2rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.profile-dropdown-item {
+  padding: 0.7rem 1.2rem;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  font-weight: 500;
+  color: #222;
+  transition: background 0.13s, color 0.13s;
+  &:hover {
+    background: #f1f5f9;
+    color: #2563eb;
+  }
+  &.logout {
+    color: #ef4444;
+    &:hover {
+      background: #fee2e2;
+      color: #b91c1c;
+    }
+  }
+}
+
+.profile-dropdown-divider {
+  border-top: 1px solid #e5e7eb;
+  margin: 0.3rem 0 0.1rem 0;
+}
+
+// Modal de Senha
+.senha-modal-bg {
+  position: fixed;
+  inset: 0;
+  background: rgba(30,41,59,0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 99999;
+}
+
+.senha-modal {
+  background: #fff;
+  color: #222;
+  padding: 2.2rem 2rem 2rem 2rem;
+  border-radius: 18px;
+  box-shadow: 0 8px 32px rgba(30,41,59,0.18);
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  min-width: 300px;
+  max-width: 300px;
+  font-size: 1.04rem;
+  font-weight: 500;
+  position: relative;
+}
+
+.senha-modal-title {
+  font-weight: 700;
+  font-size: 1.13rem;
+  margin-bottom: 2.2rem;
+  margin-top: 0;
+  align-self: center;
+  text-align: center;
+  width: 100%;
+  padding-top: 0.1rem;
+}
+
+.senha-modal-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  width: 100%;
+  align-items: stretch;
+  min-width: 220px;
+  flex: 1 1 auto;
+  justify-content: flex-start;
+  /* Adiciona espaço extra para empurrar os botões para baixo */
+}
+
+.senha-modal-label {
+  font-weight: 600;
+  font-size: 0.98rem;
+  margin-bottom: 0.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding-left: 0rem;
+  padding-right: 1rem;
+}
+
+.senha-modal-input-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.senha-modal-input {
+  width: 100%;
+  padding: 0.6rem 0.5rem;
+  border-radius: 7px;
+  border: 1.2px solid #cbd5e1;
+  background: #f6f7fa;
+  font-size: 0.98rem;
+  margin-top: 0.15rem;
+}
+
+.senha-modal-eye-btn {
+  position: absolute;
+  right: -0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  outline: none;
+  cursor: pointer;
+  color: #64748b;
+  padding: 0;
+  display: flex;
+  align-items: center;
+}
+
+.senha-modal-error {
+  color: #ef4444;
+  font-size: 0.93rem;
+  font-weight: 600;
+}
+
+.senha-modal-actions {
+  display: flex;
+  gap: 0.8rem;
+  margin-top: 2.2rem; // aumenta o espaço dos botões em relação aos inputs
+  justify-content: center;
+  align-items: flex-end;
+  width: 100%;
+}
+
+.senha-modal-btn {
+  border: none;
+  border-radius: 7px;
+  padding: 0.5rem 1.1rem;
+  font-weight: 700;
+  font-size: 0.97rem;
+  cursor: pointer;
+  min-width: 90px;
+}
+
+.senha-modal-btn.salvar {
+  background: linear-gradient(90deg, #2563eb 60%, #38bdf8 100%);
+  color: #fff;
+  box-shadow: 0 4px 16px rgba(56,189,248,0.13);
+}
+
+.senha-modal-btn.cancelar {
+  background: #e5e7eb;
+  color: #222;
+}
+
+// Success Card
+.contabilidade-success-card {
+  position: fixed;
+  left: 24px;
+  bottom: 32px;
+  z-index: 1000000;
+  pointer-events: none;
+  animation: slideUpDown 2.5s cubic-bezier(.4,0,.2,1);
+}
+
+.contabilidade-success-inner {
+  background: linear-gradient(90deg, #22c55e 60%, #16a34a 100%);
+  color: #fff;
+  padding: 1.2rem 2rem;
+  border-radius: 14px;
+  box-shadow: 0 8px 32px rgba(30,41,59,0.18);
+  display: flex;
+  align-items: center;
+  gap: 1.1rem;
+  min-width: 260px;
+  font-size: 1.13rem;
+  font-weight: 600;
+}
+
+.contabilidade-loading-bg {
+  position: fixed;
+  inset: 0;
+  background: rgba(30,41,59,0.38);
+  z-index: 999999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.3s;
+}
+
+.contabilidade-loading-modal {
+  background: #fff;
+  padding: 2.2rem 2.5rem;
+  border-radius: 18px;
+  box-shadow: 0 8px 32px rgba(30,41,59,0.18);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.1rem;
+  min-width: 220px;
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+
+.contabilidade-loading-spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid #2563eb;
+  border-top: 4px solid #e5e7eb;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 1.1rem;
+}
+
+.contabilidade-loading-text {
+  color: #2563eb;
+}
+
+// Responsivo
+@media (max-width: 900px) {
+  .sidebar {
+    width: 60px !important;
+    .sidebar-section-title,
+    .sidebar-label,
+    .sidebar-arrow,
+    .sidebar-badge {
+      display: none !important;
+    }
+    &:hover {
+      width: 220px !important;
+      .sidebar-section-title,
+      .sidebar-label,
+      .sidebar-arrow,
+      .sidebar-badge {
+        display: initial !important;
+      }
+    }
+  }
+  .header {
+    padding: 0 0.7rem;
+  }
+  .content {
+    padding: 1rem 0.5rem;
+  }
+}

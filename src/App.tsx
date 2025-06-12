@@ -1,16 +1,39 @@
-import { useState } from "react";
+import { BrowserRouter as Router, Routes, Route, useLocation } from "react-router-dom";
+import { AnimatePresence } from "framer-motion";
 import Login from "./pages/Login";
+import Layout from "./pages/Layout";
+import Home from "./pages/Home";
+import Relatorios from "./pages/Relatorios";
+import CentroCusto from "./pages/CentroCusto";
+import Validador from "./pages/Validador";
+import Contabilidades from "./pages/Contabilidades";
+import ContabilidadeForm from "./pages/ContabilidadeForm";
 
-function App() {
-  const [autenticado, setAutenticado] = useState(false);
-
-  return autenticado ? (
-    <div className="h-screen flex items-center justify-center">
-      <h1 className="text-2xl font-bold text-gray-800">Bem-vindo 🎉</h1>
-    </div>
-  ) : (
-    <Login onLogin={() => setAutenticado(true)} />
+function AnimatedRoutes() {
+  const location = useLocation();
+  return (
+    <AnimatePresence mode="wait">
+      <Routes location={location} key={location.pathname}>
+        <Route path="/" element={<Login />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/" element={<Layout />}>
+          <Route path="home" element={<Home />} />
+          <Route path="relatorios" element={<Relatorios />} />
+          <Route path="centro-custo" element={<CentroCusto />} />
+          <Route path="validador" element={<Validador />} />
+          <Route path="contabilidades" element={<Contabilidades />} />
+          <Route path="contabilidades/novo" element={<ContabilidadeForm />} />
+          <Route path="contabilidades/:id" element={<ContabilidadeForm />} />
+        </Route>
+      </Routes>
+    </AnimatePresence>
   );
 }
 
-export default App;
+export default function App() {
+  return (
+    <Router>
+      <AnimatedRoutes />
+    </Router>
+  );
+}
