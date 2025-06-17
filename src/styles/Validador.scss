@@ -1,0 +1,295 @@
+.validador-container {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  padding: 0 0 0.5rem 0; // ainda menos espaçamento inferior
+  min-height: 100vh;
+  background: #f8fafc;
+}
+
+.validador-top-row {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 2rem;
+  margin-bottom: 0.5rem;
+  padding: 1.2rem 1vw 1.2rem 1vw; // adiciona um padding vertical interno
+  width: 100%;
+  max-width: 100vw;
+  box-sizing: border-box;
+  margin-top: 0; // gruda no topo
+  position: relative; // garante alinhamento relativo
+  background: #f3f4f6; // área acinzentada
+  border-radius: 18px;
+  box-shadow: 0 2px 8px rgba(30,41,59,0.04);
+}
+
+.validador-header-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem; // quase sem espaço entre título e dados
+  justify-content: center;
+}
+
+.validador-titulo {
+  font-size: 2.1rem;
+  font-weight: 800;
+  color: #2563eb;
+  margin-bottom: 0; // remove espaço extra abaixo do título
+  text-align: left;
+  letter-spacing: 0.01em;
+  line-height: 1.1;
+}
+
+.validador-empresa-dados {
+  font-size: 1.13rem;
+  color: #111;
+  display: flex;
+  flex-direction: row;
+  gap: 0.6rem; // ainda menos espaço entre CNPJ e Clientes
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  align-items: center;
+}
+
+.validador-importar-btn {
+  background: linear-gradient(90deg, #2563eb 60%, #38bdf8 100%);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 0.7rem 1.7rem;
+  font-size: 1.08rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.18s, color 0.18s, box-shadow 0.18s;
+  box-shadow: 0 4px 16px rgba(56,189,248,0.13);
+  margin-top: 0.2rem;
+  align-self: center;
+  position: static;
+  right: unset;
+  top: unset;
+  letter-spacing: 0.01em;
+}
+.validador-importar-btn:hover {
+  background: linear-gradient(90deg, #1e40af 60%, #2563eb 100%);
+  color: #fff;
+  box-shadow: 0 6px 24px rgba(37,99,235,0.16);
+}
+
+.validador-tabela-wrapper {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  margin-top: 4rem; // aumenta ainda mais o espaçamento entre o topo e a planilha
+}
+
+.validador-tabela {
+  width: 90%;
+  max-width: 1100px;
+  border-collapse: separate;
+  border-spacing: 0 18px;
+  margin-top: 1.2rem;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  table-layout: fixed; // garante alinhamento das colunas
+}
+
+.validador-tabela th,
+.validador-tabela td {
+  text-align: left;
+  vertical-align: middle;
+}
+
+.validador-tabela th {
+  font-size: 1.08rem;
+  font-weight: 700;
+  color: #222;
+  padding-bottom: 0.7rem;
+  background: none;
+  border: none;
+  padding-left: 1.1rem;
+  padding-right: 1.1rem;
+}
+
+.validador-tabela-row {
+  background: #f5f7fa;
+  border-radius: 18px !important; // borda mais arredondada
+  box-shadow: 0 2px 8px rgba(30,41,59,0.06);
+  overflow: hidden;
+  transition: box-shadow 0.18s;
+}
+
+.validador-tabela-row td {
+  padding: 0.7rem 1.1rem;
+  font-size: 1.13rem;
+  font-weight: 600;
+  color: #222;
+  background: none;
+  border: none;
+  text-align: left;
+  vertical-align: middle;
+  word-break: break-word;
+}
+
+.validador-tabela th:nth-child(1),
+.validador-tabela td:nth-child(1) {
+  width: 70px;
+  text-align: center;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.validador-tabela th:nth-child(2),
+.validador-tabela td:nth-child(2) {
+  width: 220px;
+}
+
+.validador-tabela th:nth-child(3),
+.validador-tabela td:nth-child(3) {
+  width: 170px;
+}
+
+.validador-tabela th:nth-child(4),
+.validador-tabela td:nth-child(4) {
+  width: 140px;
+}
+
+.validador-tabela th:nth-child(5),
+.validador-tabela td:nth-child(5) {
+  width: 120px;
+}
+
+.validador-tabela th:nth-child(6),
+.validador-tabela td:nth-child(6) {
+  width: 160px;
+  text-align: right;
+  padding-right: 1.5rem;
+}
+
+.validador-tabela-circulo {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #2563eb 60%, #38bdf8 100%);
+  color: #fff;
+  font-size: 1.35rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+}
+
+.validador-tabela-status {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.7rem;
+  min-width: 120px;
+}
+
+.validador-tabela-status-captcha {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: linear-gradient(90deg, #2563eb 60%, #38bdf8 100%);
+  border-radius: 0 30px 30px 0;
+  padding: 0.2rem 1.2rem 0.2rem 0.7rem;
+  color: #fff;
+  font-weight: 700;
+}
+
+.validador-tabela-captcha-img {
+  height: 32px;
+  border-radius: 4px;
+  background: #fff;
+  margin-right: 0.5rem;
+}
+
+.validador-tabela-captcha-text {
+  font-size: 1.18rem;
+  font-weight: 700;
+  margin-left: 0.2rem;
+}
+
+.validador-tabela-status-loading {
+  background: linear-gradient(90deg, #fbbf24 60%, #f59e42 100%);
+  border-radius: 0 30px 30px 0;
+  padding: 0.2rem 1.2rem 0.2rem 0.7rem;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.validador-tabela-loading-spinner {
+  width: 28px;
+  height: 28px;
+  border: 4px solid #fff;
+  border-top: 4px solid #f59e42;
+  border-radius: 50%;
+  animation: validador-spin 1s linear infinite;
+  margin: 0 0.2rem;
+}
+
+@keyframes validador-spin {
+  0% { transform: rotate(0deg);}
+  100% { transform: rotate(360deg);}
+}
+
+.validador-tabela-status-ok {
+  background: linear-gradient(90deg, #22c55e 60%, #4ade80 100%);
+  border-radius: 0 30px 30px 0;
+  padding: 0.2rem 1.2rem 0.2rem 0.7rem;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.validador-tabela-ok-icon {
+  font-size: 2rem;
+  color: #fff;
+  font-weight: 700;
+}
+
+.validador-tabela-status-erro {
+  background: linear-gradient(90deg, #dc2626 60%, #f87171 100%);
+  border-radius: 0 30px 30px 0;
+  padding: 0.2rem 1.2rem 0.2rem 0.7rem;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.validador-tabela-erro-icon {
+  font-size: 2rem;
+  color: #fff;
+  font-weight: 700;
+}
+
+.validador-tabela-empresa,
+.validador-tabela-cnpj,
+.validador-tabela-usuario,
+.validador-tabela-senha {
+  font-size: 1.13rem;
+  font-weight: 700;
+  color: #222;
+  letter-spacing: 0.01em;
+}
+
+/* Remova os conjuntos de regras vazios abaixo para evitar o warning: */
+
+// .validador-status-captcha td,
+// .validador-status-captcha {
+// }
+
+// .validador-status-loading td,
+// .validador-status-loading {
+// }
+
+// .validador-status-ok td,
+// .validador-status-ok {
+// }
+
+// .validador-status-erro td,
+// .validador-status-erro {
+// }
