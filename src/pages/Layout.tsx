@@ -1,12 +1,11 @@
 import { useState, useRef, useEffect } from "react";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
-import { User, House, FileText, FileSearch, Users, PiggyBank, LogOut, KeyRound, ChevronDown, Eye, CheckCircle } from "lucide-react";
+import { User, House, FileText, Users, PiggyBank, LogOut, KeyRound, ChevronDown, Eye, CheckCircle } from "lucide-react";
 import "../styles/Home.scss";
 import "../styles/Layout.scss"; // Adicione um novo arquivo para estilos do layout
 
 const SIDEBAR_ITEMS = [
   { label: "Dashboard", icon: <House size={20} />, route: "/home" },
-  { label: "Validador", icon: <FileSearch size={20} />, route: "/validador" },
   { label: "Contabilidades", icon: <Users size={20} />, route: "/contabilidades" },
   { label: "Relatórios", icon: <FileText size={20} />, route: "/relatorios" },
   { label: "C. Custo", icon: <PiggyBank size={20} />, route: "/centro-custo" },
