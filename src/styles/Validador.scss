@@ -114,7 +114,7 @@
 .validador-tabela {
   width: 100%;
   border-collapse: separate;
-  border-spacing: 0 10px; // espaçamento vertical entre linhas
+  border-spacing: 0 5px; // espaçamento vertical entre linhas
   font-family: 'Segoe UI', Arial, sans-serif;
   font-size: 14px;
   color: #111;
@@ -156,8 +156,8 @@
   th {
     font-weight: 600;
     color: #374151;
-    font-size: 13px;
-    padding: 8px 16px;
+    font-size: 12px;
+    padding: 0px 28px;
   }
 }
 
@@ -183,7 +183,7 @@
 
 .validador-tabela-row td {
   padding: 1.05rem 1.3rem;
-  font-size: 1.15rem;
+  font-size: 11px;
   font-weight: 600;
   color: #222;
   background: none;
@@ -518,3 +518,79 @@
 // .validador-status-erro td,
 // .validador-status-erro {
 // }
+
+.validador-tabela-captcha-overlay-cell {
+  position: relative;
+  padding: 0 !important;
+  height: 0;
+  z-index: 10;
+}
+
+.validador-captcha-overlay {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: auto;
+  min-width: 200px;
+  max-width: 95vw;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 1.2rem;
+  padding: 1.2rem 2rem;
+  border-radius: 18px;
+  box-shadow: 0 6px 24px rgba(37, 99, 235, 0.16);
+  font-size: 15px;
+  font-weight: 600;
+  z-index: 20;
+  background: #f3f4f6;
+  transition: background 0.3s;
+  padding: 0px 10px;
+}
+
+// Fundo para cada status
+.validador-captcha-bg-captcha {
+  background: linear-gradient(90deg, #2563eb 60%, #38bdf8 100%);
+  color: #fff;
+}
+.validador-captcha-bg-carregando {
+  background: linear-gradient(90deg, #fbbf24 60%, #f59e42 100%);
+  color: #fff;
+}
+.validador-captcha-bg-ok {
+  background: linear-gradient(90deg, #22c55e 60%, #4ade80 100%);
+  color: #fff;
+}
+.validador-captcha-bg-erro {
+  background: linear-gradient(90deg, #dc2626 60%, #f87171 100%);
+  color: #fff;
+}
+
+// Ajuste para input e botão dentro do overlay
+.validador-captcha-overlay .validador-captcha-input {
+  width: 70px;
+  padding: 4px 8px;
+  font-size: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  text-align: center;
+  background: #fff;
+  color: #222;
+}
+
+.validador-captcha-overlay .validador-captcha-btn {
+  padding: 4px 12px;
+  background: #111827;
+  color: #fff;
+  border-radius: 4px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  margin-left: 0.5rem;
+  transition: background 0.2s;
+}
+.validador-captcha-overlay .validador-captcha-btn:hover {
+  background: #2563eb;
+}
