@@ -180,6 +180,30 @@ export default function Validador() {
         </div>
       </div>
 
+      {/* Adicione este bloco JSX logo abaixo do header (após o header cinza, antes das planilhas/tabelas) */}
+      <div className="validador-actions-bar">
+        <div className="validador-actions-left">
+          <label className="validador-label-modo">
+            <span>Modo:</span>
+            <select className="validador-select-modo">
+              <option value="automatico">Automático</option>
+              <option value="manual">Manual</option>
+            </select>
+          </label>
+          <button className="validador-btn-executar" type="button">
+            Executar
+          </button>
+        </div>
+        <div className="validador-actions-right">
+          <button
+            className="validador-btn-exportar"
+            type="button"
+          >
+            Exportar PDF
+          </button>
+        </div>
+      </div>
+
       <div className="validador-tabela-dupla">
         <div>{renderTabela(linhasAtivas)}</div>
         <div>{renderTabela(linhasComErro)}</div>

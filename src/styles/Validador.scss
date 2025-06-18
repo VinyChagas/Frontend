@@ -26,18 +26,37 @@
   width: 100%;
   max-width: 100vw;
   box-sizing: border-box;
-  margin-top: 0; // gruda no topo
+  margin-top: -20px; // gruda no topo
   position: relative; // garante alinhamento relativo
   background: #f3f4f6; // área acinzentada
   border-radius: 18px;
   box-shadow: 0 2px 8px rgba(30,41,59,0.04);
 }
 
+.validador-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0;
+  gap: 1rem;
+  background: #f1f5f9;
+  width: 100%;
+  max-width: 1000px;
+  min-width: 320px;
+  position: relative;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 0.7rem 2rem 0.7rem 2rem;
+  box-sizing: border-box;
+  border-radius: 12px;
+}
+
 .validador-header-info {
   display: flex;
   flex-direction: column;
-  gap: 0.1rem; // quase sem espaço entre título e dados
-  justify-content: center;
+  gap: 0.5rem;
+  justify-content: flex-start;
+  margin-top: -1rem; // eleva o texto um pouco para cima
 }
 
 .validador-titulo {
@@ -66,18 +85,20 @@
   color: #fff;
   border: none;
   border-radius: 8px;
-  padding: 0.7rem 1.7rem;
+  padding: 0.6rem 1.5rem;
   font-size: 1.08rem;
   font-weight: 700;
   cursor: pointer;
   transition: background 0.18s, color 0.18s, box-shadow 0.18s;
   box-shadow: 0 4px 16px rgba(56,189,248,0.13);
-  margin-top: 0.2rem;
+  margin-top: 1.3rem;
   align-self: center;
   position: static;
   right: unset;
   top: unset;
   letter-spacing: 0.01em;
+  min-width: 160px;
+  height: 44px;
 }
 .validador-importar-btn:hover {
   background: linear-gradient(90deg, #1e40af 60%, #2563eb 100%);
@@ -501,24 +522,6 @@
   }
 }
 
-/* Remova os conjuntos de regras vazios abaixo para evitar o warning: */
-
-// .validador-status-captcha td,
-// .validador-status-captcha {
-// }
-
-// .validador-status-loading td,
-// .validador-status-loading {
-// }
-
-// .validador-status-ok td,
-// .validador-status-ok {
-// }
-
-// .validador-status-erro td,
-// .validador-status-erro {
-// }
-
 .validador-tabela-captcha-overlay-cell {
   position: relative;
   padding: 0 !important;
@@ -593,4 +596,116 @@
 }
 .validador-captcha-overlay .validador-captcha-btn:hover {
   background: #2563eb;
+}
+
+.validador-actions-bar {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 2rem;
+  margin-bottom: 0.5rem;
+  padding: 0.5rem 1vw 0.5rem 1vw; 
+  min-height: 48px;
+  width: 100%;
+  max-width: 100vw;
+  box-sizing: border-box;
+  margin-top: 1px;
+  position: relative;
+  background: #f8fafc; // mesma cor do restante da tela
+  border-bottom: none;
+  box-shadow: none;
+  border-radius: 18px;
+}
+
+.validador-actions-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: flex-start;
+  margin-left: auto; // empurra o botão exportar para o canto direito
+  margin-right: 0;
+  height: 100%;
+}
+
+.validador-actions-left {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin-left: 0;
+  flex: 1 1 auto;
+}
+
+.validador-label-modo {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  font-weight: 700;
+  font-size: 1.05rem;
+  background: #f8fafc;
+  border-radius: 8px;
+  padding: 0.6rem 1.2rem;
+  border-bottom: none;
+  box-shadow: none;
+  margin-top: 0.2rem;
+  margin-left: -20px;
+  height: 48px;
+}
+
+.validador-select-modo {
+  min-width: 140px;
+  font-weight: 700;
+  font-size: 1.05rem;
+  padding: 0.50rem 1rem;
+  border-radius: 8px;
+  border: 1.5px solid #2563eb;
+  background: #f8fafc;
+  color: #222;
+  outline: none;
+  height: 38px;
+  margin-top: 0;
+}
+
+.validador-btn-executar {
+  background: linear-gradient(90deg, #2563eb 60%, #38bdf8 100%);
+  color: #fff;
+  font-weight: 700;
+  font-size: 1.01rem;
+  border: none;
+  border-radius: 8px;
+  padding: 0.6rem 1.5rem;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(56,189,248,0.13);
+  transition: background 0.18s;
+  min-width: 160px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 40px;
+  margin-top: 0.9rem;
+}
+
+.validador-btn-exportar {
+  background: linear-gradient(90deg, #22c55e 60%, #16a34a 100%);
+  color: #fff;
+  font-weight: 700;
+  font-size: 1.01rem;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(34,197,94,0.13);
+  transition: background 0.18s;
+  min-width: 190px;
+  height: 42px; // altura reduzida
+  padding: 0.4rem 2.4rem; // padding ajustado para altura menor
+  margin-left: 1.5rem; // afasta um pouco da borda direita
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-left: auto;
+  font-size: 1.01rem;
+  font-weight: 700;
+  border-radius: 8px;
+  margin-top: 12px;
 }
