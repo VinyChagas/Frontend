@@ -11,11 +11,26 @@ export default function Validador() {
   const [linhasComErro, setLinhasComErro] = useState<any[]>([]);
   const [respostaCaptcha, setRespostaCaptcha] = useState<Record<number, string>>({});
 
-  useEffect(() => {
-    fetch("http://localhost:4000/empresas")
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.length > 0) setEmpresa(data[0]);
+useEffect(() => {
+  fetch("http://localhost:4000/empresas")
+    .then((res) => res.json())
+    .then((data) => {
+      if (data.length > 0) {
+        setEmpresa(data[0]);
+
+        // Carrega JSON da contabilidade
+        const nomeContabilidade = data[0].nome;
+        fetch(`http://localhost:4000/empresas/validacoes/${encodeURIComponent(nomeContabilidade)}`)
+          .then(res => res.json())
+          .then(dados => {
+            if (Array.isArray(dados)) {
+              setLinhasAtivas(dados);
+            } else {
+              console.warn('Nenhum dado encontrado para esta contabilidade.');
+            }
+          })
+          .catch(err => console.error('Erro ao carregar JSON da contabilidade:', err));
+      }
       });
   }, []);
 
@@ -163,6 +178,57 @@ const handleUpload = async (file: File) => {
     });
   }
 
+  const executarValidacao = async () => {
+  try {
+    const res = await fetch("http://localhost:4000/api/executar-validacao", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        contabilidade: empresa.nome,
+      }),
+    });
+
+    const resultado = await res.json();
+
+    if (resultado.sucesso) {
+      alert("✅ Validação iniciada com sucesso!");
+    } else {
+      alert("❌ Erro ao iniciar validação: " + resultado.erro);
+    }
+  } catch (error) {
+    console.error("Erro ao executar validação:", error);
+    alert("Erro ao executar validação.");
+  }
+};
+
+  const salvarNoBackend = async () => {
+  try {
+      const res = await fetch('http://localhost:4000/api/salvar-json', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        contabilidade: empresa.nome,
+        dados: linhasAtivas,
+      }),
+    });
+
+    const resultado = await res.json();
+
+    if (resultado.sucesso) {
+      alert('✅ JSON salvo com sucesso no backend!');
+    } else {
+      alert('Erro ao salvar JSON: ' + resultado.erro);
+    }
+  } catch (err) {
+    console.error('Erro ao salvar JSON no backend:', err);
+    alert('Erro ao salvar JSON no backend.');
+  }
+};
+
   function renderTabela(linhas: any[]) {
     return (
       <table className="validador-tabela">
@@ -258,8 +324,11 @@ const handleUpload = async (file: File) => {
               <option value="manual">Manual</option>
             </select>
           </label>
-          <button className="validador-btn-executar" type="button">
-            Executar
+            <button className="validador-btn-executar" type="button" onClick={executarValidacao}>
+              Executar
+            </button>
+          <button className="validador-btn-executar" type="button" onClick={salvarNoBackend}>
+            Salvar
           </button>
         </div>
         <div className="validador-actions-right">
