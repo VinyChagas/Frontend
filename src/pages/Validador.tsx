@@ -155,7 +155,7 @@ function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
         CNPJ: row["CNPJ"] || "",
         usuario: row["usuario"] || "",
         senha: row["senha"] || "",
-        status: "carregando",
+        status: "",
         captchaImg: "",
       }));
 
@@ -198,7 +198,7 @@ const handleUpload = async (file: File) => {
         mes: row.mes || "",
         ano: row.ano || "",
         IM: row.IM || "",
-        status: "carregando",
+        status: "",
         captchaImg: "",
       }));
 
@@ -222,6 +222,14 @@ function enviarCaptcha(linha: number) {
 }
 
 const executarValidacao = async () => {
+
+  setLinhasAtivas((prevLinhas) =>
+    prevLinhas.map((linha) => ({
+      ...linha,
+      status: "carregando",
+    }))
+  );
+  
   try {
     const res = await fetch("http://localhost:4000/api/executar-validacao", {
       method: "POST",
