@@ -7,6 +7,37 @@
   background: #f8fafc;
 }
 
+.validador-status-cell {
+  width: 80px;
+  text-align: center;
+  position: relative;
+}
+
+.validador-status-icone {
+  font-size: 1.4rem;
+  &.sucesso {
+    color: #2ecc71;
+  }
+  &.erro {
+    color: #e74c3c;
+  }
+}
+
+.validador-status-loader {
+  display: inline-block;
+  width: 24px;
+  height: 24px;
+  border: 3px solid rgba(0,0,0,0.1);
+  border-left-color: #f39c12;
+  border-radius: 50%;
+  animation: girar 0.9s linear infinite;
+}
+
+@keyframes girar {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
 .validador-bg-gradiente {
   min-height: 100vh;
   background: linear-gradient(120deg, #2563eb 0%, #38bdf8 40%, #f8fafc 100%);

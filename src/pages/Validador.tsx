@@ -1,4 +1,3 @@
-import { color } from "framer-motion";
 import "../styles/Validador.scss";
 import { useEffect, useState } from "react";
 import { io } from "socket.io-client";
@@ -11,6 +10,49 @@ export default function Validador() {
   const [linhasAtivas, setLinhasAtivas] = useState<any[]>([]);
   const [linhasComErro, setLinhasComErro] = useState<any[]>([]);
   const [respostaCaptcha, setRespostaCaptcha] = useState<Record<number, string>>({});
+
+const [statusEmpresas, setStatusEmpresas] = useState<Record<string, any[]>>({});
+
+useEffect(() => {
+  socket.on("progresso", (info) => {
+    const { linha, empresa, etapa, status, CNPJ } = info;
+
+    // Atualiza status por CNPJ (visão geral)
+    setStatusEmpresas((prev) => {
+      const anterior = prev[CNPJ] || [];
+      return {
+        ...prev,
+        [CNPJ]: [...anterior, { linha, empresa, etapa, status }]
+      };
+    });
+
+    // Atualiza tabela da tela principal
+    setLinhasAtivas((prev) => {
+      const atualizada = prev.map((l) =>
+        l.linha === linha
+          ? {
+              ...l,
+              status: status,
+              captchaImg: info.captchaBase64 || l.captchaImg,
+            }
+          : l
+      );
+
+      const removida = atualizada.filter((l) => {
+        if (status.toLowerCase().includes("sucesso")) return true;
+        setLinhasComErro((erroAntigo) => [...erroAntigo, { ...l, status }]);
+        return false;
+      });
+
+      return removida;
+    });
+  });
+
+  return () => {
+    socket.off("progresso");
+  };
+}, []);
+
 
 useEffect(() => {
   fetch("http://localhost:4000/empresas")
@@ -87,13 +129,13 @@ async function carregarValidacoes() {
   }
 }
 
-if (empresa?.nome) {
-  carregarValidacoes();
-}
-}, [empresa]);
-function handleImportarClick() {
-  document.getElementById("input-planilha")?.click();
-}
+  if (empresa?.nome) {
+    carregarValidacoes();
+  }
+  }, [empresa]);
+  function handleImportarClick() {
+    document.getElementById("input-planilha")?.click();
+  }
 
 function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
   const file = e.target.files?.[0];
@@ -243,6 +285,7 @@ function renderTabela(linhas: any[]) {
           <th>Presumido</th>
           <th>Empresa</th>
           <th>CNPJ</th>
+          <th>Status</th> {/* nova coluna */}
         </tr>
       </thead>
       <tbody>
@@ -263,9 +306,26 @@ function renderTabela(linhas: any[]) {
             </td>
             <td>{linha.empresa?.toString().slice(0, 23)}</td>
             <td>{linha.CNPJ}</td>
-            {/* Overlay captcha */}
+
+            {/* NOVA COLUNA DE STATUS COM ANIMAÇÕES */}
+            <td className="validador-status-cell">
+              {linha.status?.toLowerCase().includes('sucesso') && (
+                <span className="validador-status-icone sucesso">✔</span>
+              )}
+              {linha.status?.toLowerCase().includes('erro') && (
+                <span className="validador-status-icone erro">✖</span>
+              )}
+              {linha.status === 'carregando' && (
+                <span className="validador-status-loader" />
+              )}
+              {linha.status === 'captcha' && (
+                <span className="validador-status-captcha">🔐</span>
+              )}
+            </td>
+
+            {/* CAPTCHAS VISUAIS (já existia) */}
             {linha.status === 'captcha' && (
-              <td colSpan={5} className="validador-tabela-captcha-overlay-cell">
+              <td colSpan={6} className="validador-tabela-captcha-overlay-cell">
                 <div className={`validador-captcha-overlay validador-captcha-bg-${linha.status?.toLowerCase()}`}>
                   <img
                     src={`data:image/png;base64,${linha.captchaImg}`}
@@ -294,6 +354,24 @@ function renderTabela(linhas: any[]) {
   );
 }
 
+function ListaStatusEmpresas({ statusEmpresas }: { statusEmpresas: Record<string, any[]> }) {
+  return (
+    <div className="validador-status-por-cnpj">
+      {Object.entries(statusEmpresas).map(([cnpj, etapas]) => (
+        <div key={cnpj} className="validador-status-bloco">
+          <h3>📄 {cnpj}</h3>
+          <ul>
+            {etapas.map((e, idx) => (
+              <li key={idx}>
+                <strong>Linha {e.linha}</strong> — {e.empresa} — <em>{e.etapa}</em>: {e.status}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </div>
+  );
+}
 const [modoLogin,      setModoLogin]      = useState<'automatico' | 'manual'>('automatico');
 const [resolucao,      setResolucao]      = useState<'FHD' | 'QHD'>('FHD');
 const [qtdNavegadores, setQtdNavegadores] = useState<number>(8);
