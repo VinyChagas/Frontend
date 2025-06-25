@@ -2,6 +2,8 @@ import "../styles/Validador.scss";
 import { useEffect, useState } from "react";
 import { io } from "socket.io-client";
 import * as XLSX from "xlsx";
+import { CheckCircle } from "@phosphor-icons/react";
+import {XCircle, Loader2 } from "lucide-react";
 
 const socket = io("http://localhost:4000");
 
@@ -26,9 +28,10 @@ useEffect(() => {
       };
     });
 
-    // Atualiza tabela da tela principal
+    // Atualiza tabela da tela principal SEM adicionar duplicidade
     setLinhasAtivas((prev) => {
-      const atualizada = prev.map((l) =>
+      // Atualiza apenas se a linha já existe, não adiciona nova
+      return prev.map((l) =>
         l.linha === linha
           ? {
               ...l,
@@ -37,15 +40,24 @@ useEffect(() => {
             }
           : l
       );
-
-      const removida = atualizada.filter((l) => {
-        if (status.toLowerCase().includes("sucesso")) return true;
-        setLinhasComErro((erroAntigo) => [...erroAntigo, { ...l, status }]);
-        return false;
-      });
-
-      return removida;
     });
+
+    // Atualiza linhas com erro sem duplicar e sem adicionar linhas incompletas
+    if (!status.toLowerCase().includes("sucesso")) {
+      setLinhasComErro((erroAntigo) => {
+        // Só adiciona se ainda não existe a linha com erro e se tem CNPJ e Procurador válidos
+        const jaExiste = erroAntigo.some((l) => l.linha === linha);
+        const temCNPJ = !!info.CNPJ;
+        const temProcurador = !!(info.procurador || info.Procurador);
+        if (jaExiste || !temCNPJ || !temProcurador) return erroAntigo;
+        const linhaErro = {
+          ...info,
+          status,
+          captchaImg: info.captchaBase64 || "",
+        };
+        return [...erroAntigo, linhaErro];
+      });
+    }
   });
 
   return () => {
@@ -293,12 +305,22 @@ function renderTabela(linhas: any[]) {
           <th>Presumido</th>
           <th>Empresa</th>
           <th>CNPJ</th>
-          <th>Status</th> {/* nova coluna */}
         </tr>
       </thead>
       <tbody>
         {linhas.map((linha, idx) => (
-          <tr key={idx} className="validador-tabela-row">
+          <tr
+            key={idx}
+            className={`validador-tabela-row ${
+              linha.status?.toLowerCase().includes("sucesso")
+                ? "status-sucesso"
+                : linha.status?.toLowerCase().includes("erro")
+                ? "status-erro"
+                : linha.status === "carregando"
+                ? "status-carregando"
+                : ""
+            }`}
+          >
             <td>
               <div className="validador-tabela-circulo">{linha.linha}</div>
             </td>
@@ -314,23 +336,31 @@ function renderTabela(linhas: any[]) {
             </td>
             <td>{linha.empresa?.toString().slice(0, 23)}</td>
             <td>{linha.CNPJ}</td>
-
-            {/* NOVA COLUNA DE STATUS COM ANIMAÇÕES */}
-            <td className="validador-status-cell">
-              {linha.status?.toLowerCase().includes('sucesso') && (
-                <span className="validador-status-icone sucesso">✔</span>
+            {/* Overlay de status animado à direita */}
+            <td style={{ position: 'relative', paddingRight: '100px' }}>
+              {/* Fundo animado de status, atrás do ícone */}
+              {(linha.status?.toLowerCase().includes("sucesso") ||
+                linha.status?.toLowerCase().includes("erro") ||
+                linha.status === "carregando") && (
+                <span className="validador-status-bg"></span>
               )}
-              {linha.status?.toLowerCase().includes('erro') && (
-                <span className="validador-status-icone erro">✖</span>
-              )}
-              {linha.status === 'carregando' && (
-                <span className="validador-status-loader" />
-              )}
-              {linha.status === 'captcha' && (
-                <span className="validador-status-captcha">🔐</span>
+              {/* Ícone de status sobreposto */}
+           {linha.status?.toLowerCase().includes("sucesso") && (
+            <div className="validador-status-overlay sucesso">
+            <CheckCircle className="validador-icon" />
+            </div>
+  )}
+          {linha.status?.toLowerCase().includes("erro") && (
+            <div className="validador-status-overlay erro">
+            <XCircle className="validador-icon" />
+          </div>
+  )}
+          {linha.status === "carregando" && (
+            <div className="validador-status-overlay carregando">
+            <Loader2 className="validador-icon loader" />
+          </div>
               )}
             </td>
-
             {/* CAPTCHAS VISUAIS (já existia) */}
             {linha.status === 'captcha' && (
               <td colSpan={6} className="validador-tabela-captcha-overlay-cell">
