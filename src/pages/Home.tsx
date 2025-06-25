@@ -3,12 +3,11 @@ import { useNavigate } from "react-router-dom";
 import "../styles/Home.scss";
 import axios from "axios";
 
-// Tipo da empresa (deve ser igual ao do cadastro)
+// Tipo da empresa
 type Empresa = {
   id: number;
   nome: string;
   clientes: number;
-  // Adicione outros campos se desejar, como erros e status futuramente
 };
 
 export default function Home() {
@@ -17,7 +16,7 @@ export default function Home() {
 
   useEffect(() => {
     axios
-      .get("http://localhost:4000/empresas")
+      .get("http://localhost:4000/api/empresas")
       .then((res) => setEmpresas(res.data as Empresa[]))
       .catch(() => setEmpresas([]));
   }, []);
@@ -32,7 +31,6 @@ export default function Home() {
         >
           <div className="home-card-header">
             <div className="home-card-logo home-card-logo--initials">
-              {/* Inicial igual à lista: apenas a primeira letra do nome */}
               {empresa.nome.trim().charAt(0).toUpperCase()}
             </div>
             <div className="home-card-title-group">
@@ -51,13 +49,13 @@ export default function Home() {
             <div className="home-card-indicator">
               <span className="home-card-indicator-label">Erros</span>
               <div className="home-card-indicator-value home-card-indicator-value--wide">
-                {/* Exemplo: 0, pois ainda não temos erros */}0
+                0
               </div>
             </div>
             <div className="home-card-indicator">
               <span className="home-card-indicator-label">Status</span>
               <div className="home-card-indicator-status home-card-indicator-status--wide">
-                {/* Exemplo: Ativo */}Ativo
+                Ativo
               </div>
             </div>
           </div>

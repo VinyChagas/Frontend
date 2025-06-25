@@ -25,7 +25,7 @@ export default function Contabilidades() {
 
   // 🔁 Atualiza empresas ao carregar
   useEffect(() => {
-    axios.get("http://localhost:4000/empresas")
+    axios.get("http://localhost:4000/api/empresas")
       .then(res => setEmpresas(res.data))
       .catch(err => {
         console.error("Erro ao buscar empresas", err);

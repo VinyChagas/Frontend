@@ -8,54 +8,58 @@ import {XCircle, Loader2 } from "lucide-react";
 const socket = io("http://localhost:4000");
 
 export default function Validador() {
-  const [empresa, setEmpresa] = useState({ nome: "", cnpj: "", clientes: 0 });
-  const [linhasAtivas, setLinhasAtivas] = useState<any[]>([]);
-  const [linhasComErro, setLinhasComErro] = useState<any[]>([]);
-  const [respostaCaptcha, setRespostaCaptcha] = useState<Record<number, string>>({});
+  const [empresa,           setEmpresa]           = useState({ nome: "", cnpj: "", clientes: 0 });
+  const [linhasAtivas,      setLinhasAtivas]      = useState<any[]>([]);
+  const [linhasComErro,     setLinhasComErro]     = useState<any[]>([]);
+  const [respostaCaptcha,   setRespostaCaptcha]   = useState<Record<number,string>>({});
+  const [statusEmpresas,    setStatusEmpresas]    = useState<Record<string,any[]>>({});
 
-const [statusEmpresas, setStatusEmpresas] = useState<Record<string, any[]>>({});
+  // 🔹 mover para cá
+  const [filaExecucao, setFilaExecucao] = useState<any[]>([]);
 
 useEffect(() => {
   socket.on("progresso", (info) => {
-    const { linha, empresa, etapa, status, CNPJ } = info;
+    const { linha, status } = info;
 
-    // Atualiza status por CNPJ (visão geral)
-    setStatusEmpresas((prev) => {
-      const anterior = prev[CNPJ] || [];
-      return {
-        ...prev,
-        [CNPJ]: [...anterior, { linha, empresa, etapa, status }]
-      };
-    });
-
-    // Atualiza tabela da tela principal SEM adicionar duplicidade
-    setLinhasAtivas((prev) => {
-      // Atualiza apenas se a linha já existe, não adiciona nova
-      return prev.map((l) =>
+    setLinhasAtivas((prevAtivas) => {
+      const atualizadas = prevAtivas.map((l) =>
         l.linha === linha
           ? {
               ...l,
-              status: status,
+              status,
               captchaImg: info.captchaBase64 || l.captchaImg,
             }
           : l
       );
+
+      const finalizada = atualizadas.find((l) => l.linha === linha);
+
+      const emExecucao = atualizadas.filter((l) =>
+        l.status === "carregando"
+      );
+
+      let novaFila = [...filaExecucao];
+      if (status.toLowerCase().includes("sucesso") || status.toLowerCase().includes("erro")) {
+        const semFinalizada = atualizadas.filter((l) => l.linha !== linha);
+
+        if (novaFila.length > 0) {
+          const proxima = { ...novaFila[0], status: "carregando" };
+          novaFila = novaFila.slice(1);
+          setFilaExecucao(novaFila);
+          return [...semFinalizada, proxima];
+        }
+
+        return semFinalizada;
+      }
+
+      return atualizadas;
     });
 
-    // Atualiza linhas com erro sem duplicar e sem adicionar linhas incompletas
     if (!status.toLowerCase().includes("sucesso")) {
       setLinhasComErro((erroAntigo) => {
-        // Só adiciona se ainda não existe a linha com erro e se tem CNPJ e Procurador válidos
         const jaExiste = erroAntigo.some((l) => l.linha === linha);
-        const temCNPJ = !!info.CNPJ;
-        const temProcurador = !!(info.procurador || info.Procurador);
-        if (jaExiste || !temCNPJ || !temProcurador) return erroAntigo;
-        const linhaErro = {
-          ...info,
-          status,
-          captchaImg: info.captchaBase64 || "",
-        };
-        return [...erroAntigo, linhaErro];
+        if (jaExiste) return erroAntigo;
+        return [...erroAntigo, { ...info }];
       });
     }
   });
@@ -63,11 +67,11 @@ useEffect(() => {
   return () => {
     socket.off("progresso");
   };
-}, []);
+}, [filaExecucao]);
 
 
 useEffect(() => {
-  fetch("http://localhost:4000/empresas")
+  fetch("http://localhost:4000/api/empresas")
     .then((res) => res.json())
     .then((data) => {
       if (data.length > 0) {
@@ -75,7 +79,8 @@ useEffect(() => {
 
         // Carrega JSON da contabilidade
         const nomeContabilidade = data[0].nome;
-        fetch(`http://localhost:4000/empresas/validacoes/${encodeURIComponent(nomeContabilidade)}`)
+        const nomeArquivoSeguro = nomeContabilidade.replace(/[^\w\d]/g, '_');
+        fetch(`http://localhost:4000/api/validacoes/${encodeURIComponent(nomeArquivoSeguro)}`)
           .then(res => res.json())
           .then(dados => {
             if (Array.isArray(dados)) {
@@ -121,30 +126,31 @@ useEffect(() => {
 }, []);
 
 useEffect(() => {
-async function carregarValidacoes() {
-  try {
-    const res = await fetch(`http://localhost:4000/empresas/validacoes/${empresa.nome}`);
-    if (!res.ok) return;
+  async function carregarValidacoes() {
+    try {
+      const nomeTratado = empresa.nome.replace(/[^\w\d]/g, '_');
+      const res = await fetch(`http://localhost:4000/empresas/validacoes/${nomeTratado}`);
+      if (!res.ok) {
+        console.warn('Nenhum dado de validação encontrado.');
+        return;
+      }
 
-    const validacoesSalvas = await res.json();
-
-    setLinhasAtivas((prev) =>
-      prev.map((linha) => {
-        const validada = validacoesSalvas.find((v: any) => v.linha === linha.linha);
-        return validada
-          ? { ...linha, status: validada.status || linha.status }
-          : linha;
-      })
-    );
-  } catch (err) {
-    console.error('Erro ao carregar validações:', err);
+      const validacoesSalvas = await res.json();
+      setLinhasAtivas((prev) =>
+        prev.map((linha) => {
+          const validada = validacoesSalvas.find((v: any) => v.linha === linha.linha);
+          return validada ? { ...linha, status: validada.status || linha.status } : linha;
+        })
+      );
+    } catch (err) {
+      console.error('Erro ao carregar validações:', err);
+    }
   }
-}
 
   if (empresa?.nome) {
     carregarValidacoes();
   }
-  }, [empresa]);
+}, [empresa]);
   function handleImportarClick() {
     document.getElementById("input-planilha")?.click();
   }
@@ -189,7 +195,7 @@ const handleUpload = async (file: File) => {
   formData.append("contabilidade", empresa.nome); // Envia o nome da contabilidade
 
   try {
-    const res = await fetch("http://localhost:4000/empresas/upload-planilha", {
+      const res = await fetch("http://localhost:4000/api/upload-planilha", {
       method: "POST",
       body: formData,
     });
@@ -233,15 +239,7 @@ function enviarCaptcha(linha: number) {
   });
 }
 
-const executarValidacao = async () => {
-
-  setLinhasAtivas((prevLinhas) =>
-    prevLinhas.map((linha) => ({
-      ...linha,
-      status: "carregando",
-    }))
-  );
-  
+  const executarValidacao = async () => {
   try {
     const res = await fetch("http://localhost:4000/api/executar-validacao", {
       method: "POST",
@@ -250,10 +248,6 @@ const executarValidacao = async () => {
       },
       body: JSON.stringify({
         contabilidade: empresa.nome,
-        modoLogin: modoLogin === 'automatico' ? 'Automático' : 'Manual',
-        modoResolucao: resolucao,
-        qtdNavegadores: qtdNavegadores,
-        linhas: [] // isso diz ao backend: “a partir da linha 2”
       }),
     });
 
@@ -269,18 +263,19 @@ const executarValidacao = async () => {
     alert("Erro ao executar validação.");
   }
 };
-const salvarNoBackend = async () => {
-try {
-    const res = await fetch('http://localhost:4000/api/salvar-json', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      contabilidade: empresa.nome,
-      dados: linhasAtivas,
-    }),
-  });
+
+  const salvarNoBackend = async () => {
+  try {
+      const res = await fetch('http://localhost:4000/api/salvar-json', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        contabilidade: empresa.nome,
+        dados: linhasAtivas,
+      }),
+    });
 
     const resultado = await res.json();
 
@@ -294,7 +289,6 @@ try {
     alert('Erro ao salvar JSON no backend.');
   }
 };
-
 function renderTabela(linhas: any[]) {
   return (
     <table className="validador-tabela">
