@@ -14,8 +14,34 @@ export default function Validador() {
   const [respostaCaptcha,   setRespostaCaptcha]   = useState<Record<number,string>>({});
   const [filaExecucao, setFilaExecucao] = useState<any[]>([]);
   const [planilhaImportada, setPlanilhaImportada] = useState(false);
-  const [captchaImgBase64, setCaptchaImgBase64] = useState<string | null>(null);
-  const [captchaInput, setCaptchaInput] = useState("");
+const [captchaImgBase64, setCaptchaImgBase64] = useState<string | null>(null);
+const [captchaInput, setCaptchaInput] = useState("");
+const [linhaCaptchaAtual, setLinhaCaptchaAtual] = useState<number | null>(null);
+// Captura o captcha enviado pelo backend via socket e exibe para o usuário
+useEffect(() => {
+  function handleCaptcha(data: { linha: number; imagem: string }) {
+    setCaptchaImgBase64(data.imagem);
+    setLinhaCaptchaAtual(data.linha);
+    setCaptchaInput("");
+  }
+  socket.on("captcha", handleCaptcha);
+  return () => {
+    socket.off("captcha", handleCaptcha);
+  };
+}, []);
+
+// Função para enviar a resposta do captcha para o backend via socket
+function enviarCaptchaParaBackend() {
+  if (captchaInput && linhaCaptchaAtual != null) {
+    socket.emit("captcha-resposta", {
+      linha: linhaCaptchaAtual,
+      resposta: captchaInput
+    });
+    setCaptchaImgBase64(null);
+    setCaptchaInput("");
+    setLinhaCaptchaAtual(null);
+  }
+}
   const filaExecucaoRef = useRef<any[]>([]);
   useEffect(() => { filaExecucaoRef.current = filaExecucao; }, [filaExecucao]);
 
@@ -474,8 +500,17 @@ return (
               inputMode="numeric"
               value={captchaInput}
               onChange={e => setCaptchaInput(e.target.value.replace(/\D/g, '').slice(0, 5))}
+              onKeyDown={e => { if (e.key === 'Enter') enviarCaptchaParaBackend(); }}
               placeholder="00000"
             />
+            <button
+              className="validador-captcha-btn"
+              type="button"
+              onClick={enviarCaptchaParaBackend}
+              disabled={!captchaInput || captchaInput.length !== 5}
+            >
+              Enviar
+            </button>
           </div>
         )}
       </div>
