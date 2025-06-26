@@ -14,6 +14,8 @@ export default function Validador() {
   const [respostaCaptcha,   setRespostaCaptcha]   = useState<Record<number,string>>({});
   const [filaExecucao, setFilaExecucao] = useState<any[]>([]);
   const [planilhaImportada, setPlanilhaImportada] = useState(false);
+  const [captchaImgBase64, setCaptchaImgBase64] = useState<string | null>(null);
+  const [captchaInput, setCaptchaInput] = useState("");
   const filaExecucaoRef = useRef<any[]>([]);
   useEffect(() => { filaExecucaoRef.current = filaExecucao; }, [filaExecucao]);
 
@@ -423,7 +425,6 @@ return (
       <div className="validador-actions-left">
         <label className="validador-label-modo">
           <span>Modo:</span>
-
           {/* automático / manual */}
           <select
             className="validador-select-modo"
@@ -433,7 +434,6 @@ return (
             <option value="automatico">Automático</option>
             <option value="manual">Manual</option>
           </select>
-
           {/* resolução */}
           <select
             className="validador-select-modo"
@@ -443,7 +443,6 @@ return (
             <option value="FHD">FHD</option>
             <option value="QHD">QHD</option>
           </select>
-
           {/* quantidade de navegadores */}
           <select
             className="validador-select-modo"
@@ -456,6 +455,29 @@ return (
             <option value={8}>8</option>
           </select>
         </label>
+        {/* Exibe o card de captcha somente se modoLogin for 'manual' */}
+        {modoLogin === 'manual' && (
+          <div className="validador-captcha-card">
+            <span className="validador-captcha-label">Captcha:</span>
+            <div className="validador-captcha-img-area">
+              {captchaImgBase64 ? (
+                <img src={`data:image/png;base64,${captchaImgBase64}`} alt="captcha" />
+              ) : (
+                <span style={{ color: "#2563eb", opacity: 0.7, fontWeight: 600, fontSize: 13 }}></span>
+              )}
+            </div>
+            <input
+              className="validador-captcha-input"
+              type="text"
+              maxLength={5}
+              pattern="[0-9]*"
+              inputMode="numeric"
+              value={captchaInput}
+              onChange={e => setCaptchaInput(e.target.value.replace(/\D/g, '').slice(0, 5))}
+              placeholder="00000"
+            />
+          </div>
+        )}
       </div>
       <div className="validador-actions-center">
           <button className="validador-btn-executar" type="button" onClick={executarValidacao}>
@@ -482,3 +504,4 @@ return (
   </div>
 );
 }
+
