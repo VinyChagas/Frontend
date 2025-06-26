@@ -1,5 +1,5 @@
 import "../styles/Validador.scss";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { io } from "socket.io-client";
 import * as XLSX from "xlsx";
 import { CheckCircle } from "@phosphor-icons/react";
@@ -12,17 +12,18 @@ export default function Validador() {
   const [linhasAtivas,      setLinhasAtivas]      = useState<any[]>([]);
   const [linhasComErro,     setLinhasComErro]     = useState<any[]>([]);
   const [respostaCaptcha,   setRespostaCaptcha]   = useState<Record<number,string>>({});
-  const [statusEmpresas,    setStatusEmpresas]    = useState<Record<string,any[]>>({});
-
-  // 🔹 mover para cá
   const [filaExecucao, setFilaExecucao] = useState<any[]>([]);
+  const [planilhaImportada, setPlanilhaImportada] = useState(false);
+  const filaExecucaoRef = useRef<any[]>([]);
+  useEffect(() => { filaExecucaoRef.current = filaExecucao; }, [filaExecucao]);
 
+
+// Consolidado: único useEffect para socket.on("progresso")
 useEffect(() => {
-  socket.on("progresso", (info) => {
+  function handleProgresso(info: any) {
     const { linha, status } = info;
-
     setLinhasAtivas((prevAtivas) => {
-      const atualizadas = prevAtivas.map((l) =>
+      let atualizadas = prevAtivas.map((l) =>
         l.linha === linha
           ? {
               ...l,
@@ -32,42 +33,32 @@ useEffect(() => {
           : l
       );
 
-      const finalizada = atualizadas.find((l) => l.linha === linha);
-
-      const emExecucao = atualizadas.filter((l) =>
-        l.status === "carregando"
-      );
-
-      let novaFila = [...filaExecucao];
-      if (status.toLowerCase().includes("sucesso") || status.toLowerCase().includes("erro")) {
-        const semFinalizada = atualizadas.filter((l) => l.linha !== linha);
-
-        if (novaFila.length > 0) {
-          const proxima = { ...novaFila[0], status: "carregando" };
-          novaFila = novaFila.slice(1);
-          setFilaExecucao(novaFila);
-          return [...semFinalizada, proxima];
-        }
-
-        return semFinalizada;
+      if (status.toLowerCase().includes("sucesso")) {
+        // Move para o final da lista
+        const linhaSucesso = atualizadas.find((l) => l.linha === linha);
+        const semLinha = atualizadas.filter((l) => l.linha !== linha);
+        return [...semLinha, linhaSucesso];
       }
-
+      if (status.toLowerCase().includes("erro")) {
+        // Remove da lista de ativas
+        return atualizadas.filter((l) => l.linha !== linha);
+      }
       return atualizadas;
     });
-
-    if (!status.toLowerCase().includes("sucesso")) {
+    // Se for erro, adiciona em linhasComErro
+    if (status.toLowerCase().includes("erro")) {
       setLinhasComErro((erroAntigo) => {
         const jaExiste = erroAntigo.some((l) => l.linha === linha);
         if (jaExiste) return erroAntigo;
         return [...erroAntigo, { ...info }];
       });
     }
-  });
-
+  }
+  socket.on("progresso", handleProgresso);
   return () => {
-    socket.off("progresso");
+    socket.off("progresso", handleProgresso);
   };
-}, [filaExecucao]);
+}, []);
 
 
 useEffect(() => {
@@ -94,36 +85,7 @@ useEffect(() => {
       });
   }, []);
 
-useEffect(() => {
-  socket.on("progresso", (info) => {
-    setLinhasAtivas((prev) => {
-      const atualizada = prev.map((l) =>
-        l.linha === info.linha
-          ? {
-              ...l,
-              status: info.status,
-              captchaImg: info.captchaBase64 || l.captchaImg,
-            }
-          : l
-      );
-      const removida = atualizada.filter((l) => {
-        if (info.status.toLowerCase().includes("sucesso")) return true;
-        if (!info.status.toLowerCase().includes("sucesso")) {
-          setLinhasComErro((erroAntigo) => [
-            ...erroAntigo,
-            { ...l, status: info.status },
-          ]);
-          return false;
-        }
-      });
-      return removida;
-    });
-  });
 
-  return () => {
-    socket.off("progresso");
-  };
-}, []);
 
 useEffect(() => {
   async function carregarValidacoes() {
@@ -165,10 +127,11 @@ function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
       const sheet = workbook.Sheets[workbook.SheetNames[0]];
       const rows = XLSX.utils.sheet_to_json(sheet);
 
+      // Processa localmente para exibir imediatamente
       const linhasProcessadas = rows.map((row: any, index: number) => ({
         linha: index + 2,
-        Procurador: row["Procurador"]?.toUpperCase() || "",
-        Presumido: row["Presumido"]?.toUpperCase() || "",
+        procurador: row["Procurador"]?.toUpperCase() || "",
+        presumido: row["Presumido"]?.toUpperCase() || "",
         empresa: row["empresa"] || "",
         CNPJ: row["CNPJ"] || "",
         usuario: row["usuario"] || "",
@@ -176,13 +139,11 @@ function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
         status: "",
         captchaImg: "",
       }));
-
       setLinhasAtivas(linhasProcessadas);
-      linhasProcessadas[0].status = "captcha";
-      linhasProcessadas[0].captchaImg = "iVBOR..."; // base64 dummy
+      setPlanilhaImportada(true);
 
-      // 🆕 Aqui você envia o arquivo para o backend
-      handleUpload(file);
+      // Se quiser já enviar para o backend, descomente a linha abaixo:
+      // handleUpload(file);
     };
     reader.readAsArrayBuffer(file);
   }
@@ -195,7 +156,7 @@ const handleUpload = async (file: File) => {
   formData.append("contabilidade", empresa.nome); // Envia o nome da contabilidade
 
   try {
-      const res = await fetch("http://localhost:4000/api/upload-planilha", {
+    const res = await fetch("http://localhost:4000/api/upload-planilha", {
       method: "POST",
       body: formData,
     });
@@ -205,8 +166,8 @@ const handleUpload = async (file: File) => {
     if (resultado.sucesso) {
       const linhasProcessadas = resultado.dados.map((row: any, index: number) => ({
         linha: row.linha || index + 2,
-        procurador: row.procurador?.toUpperCase() || row["Procurador"]?.toUpperCase() || "",
-        presumido: row.presumido?.toUpperCase() || "",
+        procurador: row.procurador?.toUpperCase() || row["procurador"]?.toUpperCase() || "",
+        presumido: row.presumido?.toUpperCase() || row["presumido"]?.toUpperCase() || "",
         empresa: row.empresa || "",
         CNPJ: row.CNPJ || "",
         usuario: row.usuario || "",
@@ -219,8 +180,8 @@ const handleUpload = async (file: File) => {
         status: "",
         captchaImg: "",
       }));
-
       setLinhasAtivas(linhasProcessadas);
+      setPlanilhaImportada(true);
     } else {
       console.error("Erro ao processar no backend:", resultado.erro);
     }
@@ -247,14 +208,17 @@ function enviarCaptcha(linha: number) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        contabilidade: empresa.nome,
+      contabilidade: empresa.nome,
+      modoLogin,
+      modoResolucao: resolucao,
+      qtdNavegadores,
       }),
     });
 
     const resultado = await res.json();
 
     if (resultado.sucesso) {
-      alert("✅ Validação iniciada com sucesso!");
+      alert("✅ Validação concluida com sucesso!");
     } else {
       alert("❌ Erro ao iniciar validação: " + resultado.erro);
     }
@@ -289,6 +253,7 @@ function enviarCaptcha(linha: number) {
     alert('Erro ao salvar JSON no backend.');
   }
 };
+
 function renderTabela(linhas: any[]) {
   return (
     <table className="validador-tabela">
@@ -302,9 +267,9 @@ function renderTabela(linhas: any[]) {
         </tr>
       </thead>
       <tbody>
-        {linhas.map((linha, idx) => (
+        {linhas.map((linha) => (
           <tr
-            key={idx}
+            key={linha.linha}
             className={`validador-tabela-row ${
               linha.status?.toLowerCase().includes("sucesso")
                 ? "status-sucesso"
@@ -319,12 +284,12 @@ function renderTabela(linhas: any[]) {
               <div className="validador-tabela-circulo">{linha.linha}</div>
             </td>
             <td>
-              <span className={`icone-status ${linha.Procurador === 'SIM' ? 'verde' : 'cinza'}`}>
+              <span className={`icone-status ${linha.procurador === 'SIM' ? 'verde' : 'cinza'}`}>
                 {linha.procurador === 'SIM' ? '✔' : ''}
               </span>
             </td>
             <td>
-              <span className={`icone-status ${linha.Presumido === 'SIM' ? 'verde' : 'cinza'}`}>
+              <span className={`icone-status ${linha.presumido === 'SIM' ? 'verde' : 'cinza'}`}>
                 {linha.presumido === 'SIM' ? '✔' : ''}
               </span>
             </td>
@@ -339,25 +304,25 @@ function renderTabela(linhas: any[]) {
                 <span className="validador-status-bg"></span>
               )}
               {/* Ícone de status sobreposto */}
-           {linha.status?.toLowerCase().includes("sucesso") && (
-            <div className="validador-status-overlay sucesso">
-            <CheckCircle className="validador-icon" />
-            </div>
-  )}
-          {linha.status?.toLowerCase().includes("erro") && (
-            <div className="validador-status-overlay erro">
-            <XCircle className="validador-icon" />
-          </div>
-  )}
-          {linha.status === "carregando" && (
-            <div className="validador-status-overlay carregando">
-            <Loader2 className="validador-icon loader" />
-          </div>
+              {linha.status?.toLowerCase().includes("sucesso") && (
+                <div className="validador-status-overlay sucesso">
+                  <CheckCircle className="validador-icon" />
+                </div>
+              )}
+              {linha.status?.toLowerCase().includes("erro") && (
+                <div className="validador-status-overlay erro">
+                  <XCircle className="validador-icon" />
+                </div>
+              )}
+              {linha.status === "carregando" && (
+                <div className="validador-status-overlay carregando">
+                  <Loader2 className="validador-icon loader" />
+                </div>
               )}
             </td>
-            {/* CAPTCHAS VISUAIS (já existia) */}
+            {/* CAPTCHAS VISUAIS */}
             {linha.status === 'captcha' && (
-              <td colSpan={6} className="validador-tabela-captcha-overlay-cell">
+              <td colSpan={5} className="validador-tabela-captcha-overlay-cell">
                 <div className={`validador-captcha-overlay validador-captcha-bg-${linha.status?.toLowerCase()}`}>
                   <img
                     src={`data:image/png;base64,${linha.captchaImg}`}
@@ -386,27 +351,49 @@ function renderTabela(linhas: any[]) {
   );
 }
 
-function ListaStatusEmpresas({ statusEmpresas }: { statusEmpresas: Record<string, any[]> }) {
+// Tabela especial para erros
+function renderTabelaErros(linhas: any[]) {
   return (
-    <div className="validador-status-por-cnpj">
-      {Object.entries(statusEmpresas).map(([cnpj, etapas]) => (
-        <div key={cnpj} className="validador-status-bloco">
-          <h3>📄 {cnpj}</h3>
-          <ul>
-            {etapas.map((e, idx) => (
-              <li key={idx}>
-                <strong>Linha {e.linha}</strong> — {e.empresa} — <em>{e.etapa}</em>: {e.status}
-              </li>
-            ))}
-          </ul>
-        </div>
-      ))}
-    </div>
+    <table className="validador-tabela validador-tabela-erro">
+      <thead>
+        <tr>
+          <th>Linha</th>
+          <th>Empresa</th>
+          <th>CNPJ</th>
+        </tr>
+      </thead>
+      <tbody>
+        {linhas.map((linha) => (
+          <>
+            <tr
+              key={linha.linha}
+              className="validador-tabela-row status-erro validador-tabela-row-erro"
+              style={{ borderBottom: '2px solid #e57373', borderLeft: '4px solid #e57373', background: '#fff6f6' }}
+            >
+              <td>
+                <div className="validador-tabela-circulo erro" style={{ background: 'linear-gradient(135deg, #ff5f6d 0%, #ffc371 100%)', color: '#fff', border: '1.5px solid #e57373' }}>
+                  {linha.linha}
+                </div>
+              </td>
+              <td>{linha.empresa?.toString().slice(0, 23)}</td>
+              <td>{linha.CNPJ}</td>
+            </tr>
+            <tr key={linha.linha + '-motivo'}>
+              <td colSpan={3} style={{ color: '#b71c1c', fontSize: 13, padding: '4px 12px 10px 32px', background: '#fff6f6', borderBottom: '2px solid #e57373' }}>
+                <strong>Motivo:</strong> {linha.motivo || linha.mensagemErro || linha.status || 'Erro desconhecido'}
+              </td>
+            </tr>
+          </>
+        ))}
+      </tbody>
+    </table>
   );
 }
-const [modoLogin,      setModoLogin]      = useState<'automatico' | 'manual'>('automatico');
+
+// ListaStatusEmpresas removido pois não é utilizado
+const [modoLogin,      setModoLogin]      = useState<'automatico' | 'manual'>('manual');
 const [resolucao,      setResolucao]      = useState<'FHD' | 'QHD'>('FHD');
-const [qtdNavegadores, setQtdNavegadores] = useState<number>(8);
+const [qtdNavegadores, setQtdNavegadores] = useState<number>(1);
 
 return (
   <div className="validador-container">
@@ -432,7 +419,6 @@ return (
       </div>
     </div>
 
-    {/* Adicione este bloco JSX logo abaixo do header (após o header cinza, antes das planilhas/tabelas) */}
     <div className="validador-actions-bar">
       <div className="validador-actions-left">
         <label className="validador-label-modo">
@@ -491,7 +477,7 @@ return (
 
     <div className="validador-tabela-dupla">
       <div>{renderTabela(linhasAtivas)}</div>
-      <div>{renderTabela(linhasComErro)}</div>
+      <div>{renderTabelaErros(linhasComErro)}</div>
     </div>
   </div>
 );
