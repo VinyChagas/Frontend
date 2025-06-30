@@ -20,9 +20,15 @@ const [linhaCaptchaAtual, setLinhaCaptchaAtual] = useState<number | null>(null);
 // Captura o captcha enviado pelo backend via socket e exibe para o usuário
 useEffect(() => {
   function handleCaptcha(data: { linha: number; imagem: string }) {
+    // Se for o mesmo captcha (mesma linha), só atualiza a imagem e limpa o input
     setCaptchaImgBase64(data.imagem);
-    setLinhaCaptchaAtual(data.linha);
     setCaptchaInput("");
+    setLinhaCaptchaAtual((linhaAtual) => {
+      // Se for um novo captcha para a mesma linha, mantém a linha
+      if (linhaAtual === data.linha) return linhaAtual;
+      // Se for para outra linha, atualiza
+      return data.linha;
+    });
   }
   socket.on("captcha", handleCaptcha);
   return () => {
@@ -31,19 +37,16 @@ useEffect(() => {
 }, []);
 
 // Função para enviar a resposta do captcha para o backend via socket
-function enviarCaptchaParaBackend() {
-  if (captchaInput && linhaCaptchaAtual != null) {
+function enviarCaptchaParaBackend(valor?: string) {
+  const resposta = valor !== undefined ? valor : captchaInput;
+  if (resposta && resposta.length === 5 && linhaCaptchaAtual != null) {
     socket.emit("captcha-resposta", {
       linha: linhaCaptchaAtual,
-      resposta: captchaInput
+      resposta
     });
-    setCaptchaImgBase64(null);
-    setCaptchaInput("");
-    setLinhaCaptchaAtual(null);
+    // Não limpa o estado aqui! Só limpa quando o backend retornar sucesso para a linha
   }
 }
-  const filaExecucaoRef = useRef<any[]>([]);
-  useEffect(() => { filaExecucaoRef.current = filaExecucao; }, [filaExecucao]);
 
 
 // Consolidado: único useEffect para socket.on("progresso")
@@ -62,13 +65,23 @@ useEffect(() => {
       );
 
       if (status.toLowerCase().includes("sucesso")) {
-        // Move para o final da lista
+        // Se for sucesso para a linha do captcha, limpa o estado de captcha
+        if (linhaCaptchaAtual === linha) {
+          setCaptchaImgBase64(null);
+          setCaptchaInput("");
+          setLinhaCaptchaAtual(null);
+        }
         const linhaSucesso = atualizadas.find((l) => l.linha === linha);
         const semLinha = atualizadas.filter((l) => l.linha !== linha);
-        return [...semLinha, linhaSucesso];
+        return linhaSucesso ? [...semLinha, linhaSucesso] : semLinha;
       }
+      // Se for erro, só remove da lista se NÃO for a linha do captcha atual
       if (status.toLowerCase().includes("erro")) {
-        // Remove da lista de ativas
+        if (linhaCaptchaAtual === linha) {
+          // Mantém a linha para permitir nova tentativa de captcha
+          return atualizadas;
+        }
+        // Remove da lista de ativas normalmente para outros casos
         return atualizadas.filter((l) => l.linha !== linha);
       }
       return atualizadas;
@@ -86,7 +99,7 @@ useEffect(() => {
   return () => {
     socket.off("progresso", handleProgresso);
   };
-}, []);
+}, [linhaCaptchaAtual]);
 
 
 useEffect(() => {
@@ -423,6 +436,19 @@ const [modoLogin,      setModoLogin]      = useState<'automatico' | 'manual'>('m
 const [resolucao,      setResolucao]      = useState<'FHD' | 'QHD'>('FHD');
 const [qtdNavegadores, setQtdNavegadores] = useState<number>(1);
 
+const captchaTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+function handleCaptchaInputChange(e: React.ChangeEvent<HTMLInputElement>) {
+  const value = e.target.value.replace(/\D/g, '').slice(0, 5);
+  setCaptchaInput(value);
+  if (captchaTimeout.current) clearTimeout(captchaTimeout.current);
+  if (value.length === 5) {
+    captchaTimeout.current = setTimeout(() => {
+      enviarCaptchaParaBackend(value);
+    }, 500); // 500ms debounce
+  }
+}
+
 return (
   <div className="validador-container">
     <div className="validador-top-row">
@@ -499,18 +525,9 @@ return (
               pattern="[0-9]*"
               inputMode="numeric"
               value={captchaInput}
-              onChange={e => setCaptchaInput(e.target.value.replace(/\D/g, '').slice(0, 5))}
-              onKeyDown={e => { if (e.key === 'Enter') enviarCaptchaParaBackend(); }}
+              onChange={handleCaptchaInputChange}
               placeholder="00000"
             />
-            <button
-              className="validador-captcha-btn"
-              type="button"
-              onClick={enviarCaptchaParaBackend}
-              disabled={!captchaInput || captchaInput.length !== 5}
-            >
-              Enviar
-            </button>
           </div>
         )}
       </div>
@@ -529,6 +546,28 @@ return (
         >
           Exportar PDF
         </button>
+        <button
+          className="validador-btn-executar"
+          type="button"
+          style={{ marginTop: 12 }}
+          onClick={async () => {
+            await fetch("http://localhost:4000/api/pausar-automacao", { method: "POST" });
+            alert("Automação pausada!");
+          }}
+        >
+          Pausar Automação
+        </button>
+        <button
+          className="validador-btn-executar"
+          type="button"
+          style={{ marginTop: 12 }}
+          onClick={async () => {
+            await fetch("http://localhost:4000/api/parar-automacao", { method: "POST" });
+            alert("Automação parada!");
+          }}
+        >
+          Parar Automação
+        </button>
       </div>
     </div>
 
@@ -539,4 +578,3 @@ return (
   </div>
 );
 }
-
