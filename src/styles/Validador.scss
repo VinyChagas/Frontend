@@ -242,85 +242,7 @@
   border-bottom-left-radius: 0 !important;
 }
 
-.validador-status-bg {
-  position: absolute;
-  top: 0;
-  right: 0;
-  height: 100%;
-  width: 90px;
-  min-width: 70px;
-  max-width: 120px;
-  border-top-right-radius: 22px !important;
-  border-bottom-right-radius: 22px !important;
-  border-top-left-radius: 0 !important;
-  border-bottom-left-radius: 0 !important;
-  overflow: hidden;
-  height: 100%;
-  z-index: 1;
-  pointer-events: none;
-  display: flex;
-  align-items: center;
-  justify-content: center; // Centraliza o ícone na área colorida
-  animation: statusAnimarRight 0.5s cubic-bezier(.4,0,.2,1);
-  background: transparent;
-}
-
-.validador-tabela-row.status-sucesso .validador-status-bg {
-  background: linear-gradient(90deg, #22c55e 60%, #4ade80 100%);
-}
-
-.validador-tabela-row.status-erro .validador-status-bg {
-  background: linear-gradient(90deg, #dc2626 60%, #f87171 100%);
-}
-
-.validador-tabela-row.status-carregando .validador-status-bg {
-  background: linear-gradient(90deg, #fbbf24 60%, #f59e42 100%);
-}
-
-@keyframes statusAnimarRight {
-  0% {
-    transform: scaleX(0.2);
-    opacity: 0;
-  }
-  60% {
-    opacity: 1;
-  }
-  100% {
-    transform: scaleX(1);
-    opacity: 1;
-  }
-}
-
-.validador-status-overlay {
-  position: absolute;
-  top: 50%;
-  right: 0;
-  transform: translateY(-50%);
-  font-size: 1.4rem;
-  z-index: 3;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 90px;
-  height: 100%;
-  pointer-events: none;
-  background: transparent;
-}
-
-// Ajuste para garantir que o ícone fique centralizado na área colorida
-.validador-status-overlay.sucesso,
-.validador-status-overlay.erro,
-.validador-status-overlay.carregando {
-  justify-content: center;
-  align-items: center;
-  display: flex;
-  width: 90px;
-  height: 100%;
-  right: 0;
-  left: unset;
-  margin: 0;
-  padding: 0;
-}
+// Removidos estilos do overlay de ícones/gradiente de status à direita
 
 .validador-tabela-row:nth-child(even) {
   background: linear-gradient(90deg, #f1f5f9 60%, #dbeafe 100%);
@@ -451,6 +373,12 @@
 
 .validador-tabela th:nth-child(6),
 .validador-tabela td:nth-child(6) {
+  width: 160px;
+  text-align: left;
+}
+
+.validador-tabela th:nth-child(7),
+.validador-tabela td:nth-child(7) {
   width: 50px;
   text-align: center;
   padding-right: 1.5rem;
@@ -914,6 +842,52 @@
   letter-spacing: 2px;
   text-align: center;
   color: #111 !important;
+}
+
+// Progressos
+.validador-progress-track {
+  width: 100%;
+  height: 10px;
+  background: #e5e7eb;
+  border-radius: 999px;
+  overflow: hidden;
+  position: relative;
+}
+
+.validador-progress-bar {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #2563eb 60%, #38bdf8 100%);
+  border-radius: 999px;
+  transition: width 0.45s ease-in-out;
+}
+.validador-progress-bar.sucesso {
+  background: linear-gradient(90deg, #22c55e 60%, #4ade80 100%);
+}
+.validador-progress-bar.erro {
+  background: linear-gradient(90deg, #dc2626 60%, #f87171 100%);
+}
+
+.validador-progress-label {
+  min-width: 40px;
+  text-align: right;
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: #111;
+}
+
+.validador-row-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.validador-global-progress {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 240px;
+  max-width: 380px;
 }
 
 
