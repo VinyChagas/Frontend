@@ -122,7 +122,7 @@ useEffect(() => {
       const lowerStatus = (status || '').toLowerCase();
       const isFinalFromStatus = /(final|conclu|empresa validada|completo|terminad)/i.test(status || '');
       const isSuccessFromStatus = /(sucesso|conclu|ok)/i.test(status || '');
-      const isErrorFromStatus = /(erro|falha|inválid|inval|fracass)/i.test(status || '');
+      const isErrorFromStatus = /(erro|falha|inválid|inval|fracass|nova senha)/i.test(status || '');
       const isFinal = Boolean(info.isFinal || isFinalFromStatus);
 
       // fallback baseado em estágios quando não veio percent
@@ -170,7 +170,7 @@ useEffect(() => {
         return atualizadas;
       }
       // Se for erro, só remove da lista se NÃO for a linha do captcha atual
-      if (status.toLowerCase().includes("erro")) {
+      if (status.toLowerCase().includes("erro") || status.toLowerCase().includes("nova senha")) {
         if (linhaCaptchaAtual === linha) {
           // Mantém a linha para permitir nova tentativa de captcha
           return atualizadas;
@@ -181,7 +181,7 @@ useEffect(() => {
       return atualizadas;
     });
     // Se for erro, adiciona em linhasComErro
-    if (status.toLowerCase().includes("erro")) {
+    if (status.toLowerCase().includes("erro") || status.toLowerCase().includes("nova senha")) {
       setLinhasComErro((erroAntigo) => {
         const jaExiste = erroAntigo.some((l) => l.linha === linha);
         if (jaExiste) return erroAntigo;
@@ -478,9 +478,9 @@ function renderTabelaErros(linhas: Linha[]) {
               <td>{linha.CNPJ}</td>
             </tr>
             <tr>
-              <td colSpan={3} style={{ color: '#b71c1c', fontSize: 13, padding: '4px 12px 10px 32px', background: '#fff6f6', borderBottom: '2px solid #e57373' }}>
-                <strong>Motivo:</strong> {linha.motivo || linha.mensagemErro || linha.status || 'Erro desconhecido'}
-              </td>
+                          <td colSpan={3} style={{ color: '#b71c1c', fontSize: 13, padding: '4px 12px 10px 32px', background: '#fff6f6', borderBottom: '2px solid #e57373' }}>
+              <strong>Motivo:</strong> {linha.motivo || linha.mensagemErro || linha.status || 'Erro desconhecido'}
+            </td>
             </tr>
           </React.Fragment>
         ))}
