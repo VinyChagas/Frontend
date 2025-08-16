@@ -712,6 +712,7 @@
   margin-top: 0.2rem;
   height: 48px;
   width: fit-content;
+  color: #111 !important; // força cor preta para o texto "Modo:"
 }
 
 .validador-select-modo {
@@ -888,6 +889,22 @@
   gap: 10px;
   min-width: 240px;
   max-width: 380px;
+}
+
+.validador-btn-padrao,
+.validador-btn-executar,
+.validador-btn-exportar {
+  min-width: 190px !important;
+  width: 190px !important;
+  height: 42px !important;
+  padding: 0.4rem 2.4rem !important;
+  font-size: 1.01rem;
+  font-weight: 700;
+  border-radius: 8px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  box-sizing: border-box;
 }
 
 

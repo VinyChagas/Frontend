@@ -9,6 +9,7 @@ const SIDEBAR_ITEMS = [
   { label: "Contabilidades", icon: <Users size={20} />, route: "/contabilidades" },
   { label: "Relatórios", icon: <FileText size={20} />, route: "/relatorios" },
   { label: "C. Custo", icon: <PiggyBank size={20} />, route: "/centro-custo" },
+  { label: "Validação", icon: <CheckCircle size={20} />, route: "/validador" }, // Nova opção adicionada
 ];
 
 export default function Layout() {

@@ -534,38 +534,7 @@ return (
 
     <div className="validador-actions-bar">
       <div className="validador-actions-left">
-        <label className="validador-label-modo">
-          <span>Modo:</span>
-          {/* automático / manual */}
-          <select
-            className="validador-select-modo"
-            value={modoLogin}
-            onChange={e => setModoLogin(e.target.value as 'automatico' | 'manual')}
-          >
-            <option value="automatico">Automático</option>
-            <option value="manual">Manual</option>
-          </select>
-          {/* resolução */}
-          <select
-            className="validador-select-modo"
-            value={resolucao}
-            onChange={e => setResolucao(e.target.value as 'FHD' | 'QHD')}
-          >
-            <option value="FHD">FHD</option>
-            <option value="QHD">QHD</option>
-          </select>
-          {/* quantidade de navegadores */}
-          <select
-            className="validador-select-modo"
-            value={qtdNavegadores}
-            onChange={e => setQtdNavegadores(parseInt(e.target.value, 10))}
-          >
-            <option value={1}>1</option>
-            <option value={2}>2</option>
-            <option value={4}>4</option>
-            <option value={8}>8</option>
-          </select>
-        </label>
+        {/* Removido label e selects de modo, resolução e navegadores */}
         {/* Exibe o card de captcha somente se modoLogin for 'manual' */}
         {modoLogin === 'manual' && (
           <div className="validador-captcha-card">
@@ -615,17 +584,7 @@ return (
         >
           Exportar PDF
         </button>
-        <button
-          className="validador-btn-executar"
-          type="button"
-          style={{ marginTop: 12 }}
-          onClick={async () => {
-            await fetch(`${API_BASE_URL}/api/pausar-automacao`, { method: "POST" });
-            alert("Automação pausada!");
-          }}
-        >
-          Pausar Automação
-        </button>
+        
         <button
           className="validador-btn-executar"
           type="button"

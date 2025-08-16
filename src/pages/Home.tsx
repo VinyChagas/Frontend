@@ -27,7 +27,7 @@ export default function Home() {
         <button
           className="home-card"
           key={empresa.id}
-          onClick={() => navigate("/validador")}
+          onClick={() => navigate("/automacao")}
         >
           <div className="home-card-header">
             <div className="home-card-logo home-card-logo--initials">
