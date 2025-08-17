@@ -4,7 +4,6 @@ import { Lock, Eye, EyeSlash } from "@phosphor-icons/react";
 import { useNavigate } from "react-router-dom";
 import "../styles/Login.scss";
 
-
 const Login: React.FC = () => {
   const [mostrarSenha, setMostrarSenha] = useState(false);
   const [senha, setSenha] = useState("");
@@ -39,7 +38,6 @@ const Login: React.FC = () => {
         transition={{ duration: 0.5, ease: "easeOut" }}
         className="login-container"
       >
-        {/* Header */}
         <div className="login-header">
           <motion.div
             className="login-icon"
@@ -67,7 +65,6 @@ const Login: React.FC = () => {
           </motion.p>
         </div>
 
-        {/* Campo de senha */}
         <motion.div
           className="login-input-wrapper"
           initial={{ opacity: 0, y: 10 }}
@@ -97,7 +94,6 @@ const Login: React.FC = () => {
           </button>
         </motion.div>
 
-        {/* Mensagem de erro */}
         {erro && (
           <motion.p
             className="login-error"
@@ -108,7 +104,6 @@ const Login: React.FC = () => {
           </motion.p>
         )}
 
-        {/* Botão */}
         <motion.button
           whileHover={{ scale: 1.03 }}
           whileTap={{ scale: 0.97 }}

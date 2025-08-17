@@ -39,7 +39,7 @@ export default function ContabilidadeForm() {
 
   useEffect(() => {
     if (id) {
-      axios.get(`http://localhost:4000/empresas/${id}`)
+      axios.get(`http://localhost:4000/api/empresas/${id}`)
         .then((res) => setForm(res.data as EmpresaForm))
         .catch((err) => {
           console.error("Erro ao buscar empresa para edição:", err);
@@ -160,10 +160,10 @@ export default function ContabilidadeForm() {
 
     try {
       if (id) {
-        await axios.put(`http://localhost:4000/empresas/${id}`, form);
+        await axios.put(`http://localhost:4000/api/empresas/${id}`, form)
         setShowSuccess("Empresa atualizada com sucesso!");
       } else {
-        await axios.post("http://localhost:4000/empresas", form);
+        await axios.post("http://localhost:4000/api/empresas", form)
         setShowSuccess("Empresa cadastrada com sucesso!");
       }
       setShowLoading(true);
@@ -181,7 +181,7 @@ export default function ContabilidadeForm() {
   async function handleDelete() {
     if (!id) return;
     try {
-      await axios.delete(`http://localhost:4000/empresas/${id}`);
+      await axios.delete(`http://localhost:4000/api/empresas/${id}`)
       setShowDeleteModal(false);
       setShowSuccess("Empresa excluída com sucesso!");
       setShowLoading(true);
