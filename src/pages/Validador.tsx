@@ -75,6 +75,25 @@ export default function Validador() {
   const [globalProgress, setGlobalProgress] = useState<number>(0);
   const [statusAutomacao, setStatusAutomacao] = useState<{ pausada: boolean; parada: boolean }>({ pausada: false, parada: false });
 
+  // Função para traduzir status em descrições amigáveis
+  const getEtapaDescricao = (status: string | undefined): string => {
+    if (!status) return '';
+    
+    const statusLower = status.toLowerCase();
+    
+    if (statusLower.includes('login')) return 'Realizando login';
+    if (statusLower.includes('captcha')) return 'Aguardando captcha';
+    if (statusLower.includes('procurador')) return 'Conferindo procurador';
+    if (statusLower.includes('cnpj')) return 'Validando CNPJ';
+    if (statusLower.includes('carregando')) return 'Carregando sistema';
+    if (statusLower.includes('sucesso')) return 'Processo concluído';
+    if (statusLower.includes('erro')) return 'Erro no processo';
+    if (statusLower.includes('nova senha')) return 'Nova senha necessária';
+    if (statusLower.includes('validação')) return 'Validando dados';
+    
+    return status; // Retorna o status original se não encontrar match
+  };
+
   // Função para verificar o status da automação
   const verificarStatusAutomacao = async () => {
     try {
@@ -412,134 +431,184 @@ function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
 
 function renderTabela(linhas: Linha[]) {
   return (
-    <table className="validador-tabela">
-      <thead>
-        <tr>
-          <th>Linha</th>
-          <th>Procurador</th>
-          <th>Presumido</th>
-          <th>Empresa</th>
-          <th>CNPJ</th>
-          <th>Progresso</th>
-        </tr>
-      </thead>
-      <tbody>
-        {linhas.map((linha) => (
-          <tr
-            key={linha.linha}
-            className={`validador-tabela-row ${
-              linha.status?.toLowerCase().includes("sucesso")
-                ? "status-sucesso"
-                : linha.status?.toLowerCase().includes("erro")
-                ? "status-erro"
-                : linha.status === "carregando"
-                ? "status-carregando"
-                : ""
-            }`}
-          >
-            <td>
-              <div className="validador-tabela-circulo">{linha.linha}</div>
-            </td>
-            <td>
-              <span className={`icone-status ${linha.procurador === 'SIM' ? 'verde' : 'cinza'}`}>
-                {linha.procurador === 'SIM' ? '✔' : ''}
-              </span>
-            </td>
-            <td>
-              <span className={`icone-status ${linha.presumido === 'SIM' ? 'verde' : 'cinza'}`}>
-                {linha.presumido === 'SIM' ? '✔' : ''}
-              </span>
-            </td>
-            <td>{linha.empresa?.toString().slice(0, 23)}</td>
-            <td>{linha.CNPJ}</td>
-            {/* Progresso da linha */}
-            <td>
-              <div className="validador-row-progress">
-                <div className="validador-progress-track">
-                  <div
-                    className={`validador-progress-bar ${
-                      linha.isFinalizada && linha.resultadoFinal === 'erro'
-                        ? 'erro'
-                        : linha.isFinalizada && linha.resultadoFinal === 'sucesso'
-                        ? 'sucesso'
-                        : 'carregando'
-                    }`}
-                    style={{ width: `${Math.max(0, Math.min(100, (linha.isFinalizada ? 100 : (linha.progressPercent ?? (linha.status?.toLowerCase().includes('carregando') ? 50 : linha.status?.toLowerCase().includes('captcha') ? 10 : 0)))))}%` }}
-                  />
-                </div>
-                <span className="validador-progress-label">
-                  {Math.round(Math.max(0, Math.min(100, (linha.isFinalizada ? 100 : (linha.progressPercent ?? (linha.status?.toLowerCase().includes('carregando') ? 50 : linha.status?.toLowerCase().includes('captcha') ? 10 : 0))))))}%
-                </span>
-              </div>
-            </td>
-            {/* Ícones de status removidos conforme solicitado */}
-            {/* CAPTCHAS VISUAIS */}
-            {linha.status === 'captcha' && (
-              <td colSpan={5} className="validador-tabela-captcha-overlay-cell">
-                <div className={`validador-captcha-overlay validador-captcha-bg-${linha.status?.toLowerCase()}`}>
-                  <img
-                    src={`data:image/png;base64,${linha.captchaImg}`}
-                    alt="captcha"
-                    width={100}
-                    height={30}
-                  />
-                  <input
-                    type="text"
-                    maxLength={5}
-                    value={respostaCaptcha[linha.linha] || ""}
-                    onChange={(e) =>
-                      setRespostaCaptcha((prev) => ({
-                        ...prev,
-                        [linha.linha]: e.target.value,
-                      }))
-                    }
-                    className="validador-captcha-input"
-                  />
-                </div>
-              </td>
-            )}
+    <div>
+      <table className="validador-tabela">
+        <thead>
+          <tr>
+            <th>Linha</th>
+            <th>Procurador</th>
+            <th>Presumido</th>
+            <th>Empresa</th>
+            <th>CNPJ</th>
+            <th>Progresso</th>
           </tr>
-        ))}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {linhas.map((linha) => (
+            <React.Fragment key={linha.linha}>
+              <tr
+                className={`validador-tabela-row ${
+                  linha.status?.toLowerCase().includes("sucesso")
+                    ? "status-sucesso"
+                    : linha.status?.toLowerCase().includes("erro")
+                    ? "status-erro"
+                    : linha.status === "carregando"
+                    ? "status-carregando"
+                    : ""
+                }`}
+              >
+                <td>
+                  <div className="validador-tabela-circulo">{linha.linha}</div>
+                </td>
+                <td>
+                  <span className={`icone-status ${linha.procurador === 'SIM' ? 'verde' : 'cinza'}`}>
+                    {linha.procurador === 'SIM' ? '✔' : ''}
+                  </span>
+                </td>
+                <td>
+                  <span className={`icone-status ${linha.presumido === 'SIM' ? 'verde' : 'cinza'}`}>
+                    {linha.presumido === 'SIM' ? '✔' : ''}
+                  </span>
+                </td>
+                <td>{linha.empresa?.toString().slice(0, 23)}</td>
+                <td>{linha.CNPJ}</td>
+                {/* Progresso da linha */}
+                <td>
+                  <div className="validador-row-progress">
+                    <div className="validador-progress-track">
+                      <div
+                        className={`validador-progress-bar ${
+                          linha.isFinalizada && linha.resultadoFinal === 'erro'
+                            ? 'erro'
+                            : linha.isFinalizada && linha.resultadoFinal === 'sucesso'
+                            ? 'sucesso'
+                            : 'carregando'
+                        }`}
+                        style={{ width: `${Math.max(0, Math.min(100, (linha.isFinalizada ? 100 : (linha.progressPercent ?? (linha.status?.toLowerCase().includes('carregando') ? 50 : linha.status?.toLowerCase().includes('captcha') ? 10 : 0)))))}%` }}
+                      />
+                    </div>
+                    <span className="validador-progress-label">
+                      {Math.round(Math.max(0, Math.min(100, (linha.isFinalizada ? 100 : (linha.progressPercent ?? (linha.status?.toLowerCase().includes('carregando') ? 50 : linha.status?.toLowerCase().includes('captcha') ? 10 : 0))))))}%
+                    </span>
+                  </div>
+                </td>
+              </tr>
+              
+              {/* Linha de descrição da etapa */}
+              {(linha.stepName || linha.status) && !linha.isFinalizada && (
+                <tr className="validador-etapa-descricao">
+                  <td colSpan={6}>
+                    <div className="validador-etapa-info">
+                      <span className="validador-etapa-icone">
+                        {linha.status?.toLowerCase().includes('captcha') ? '🔐' : '🔄'}
+                      </span>
+                      <span className="validador-etapa-texto">
+                        {linha.stepName || getEtapaDescricao(linha.status)}
+                      </span>
+                      {linha.stepIndex && linha.stepTotal && (
+                        <span className="validador-etapa-contador">
+                          {linha.stepIndex}/{linha.stepTotal}
+                        </span>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              )}
+              
+              {/* CAPTCHAS VISUAIS */}
+              {linha.status === 'captcha' && (
+                <tr className="validador-tabela-captcha-overlay-cell">
+                  <td colSpan={6}>
+                    <div className={`validador-captcha-overlay validador-captcha-bg-${linha.status?.toLowerCase()}`}>
+                      <img
+                        src={`data:image/png;base64,${linha.captchaImg}`}
+                        alt="captcha"
+                        width={100}
+                        height={30}
+                      />
+                      <input
+                        type="text"
+                        maxLength={5}
+                        value={respostaCaptcha[linha.linha] || ""}
+                        onChange={(e) =>
+                          setRespostaCaptcha((prev) => ({
+                            ...prev,
+                            [linha.linha]: e.target.value,
+                          }))
+                        }
+                        className="validador-captcha-input"
+                      />
+                    </div>
+                  </td>
+                </tr>
+              )}
+            </React.Fragment>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
 
 // Tabela especial para erros
 function renderTabelaErros(linhas: Linha[]) {
   return (
-    <table className="validador-tabela validador-tabela-erro">
-      <thead>
-        <tr>
-          <th>Linha</th>
-          <th>Empresa</th>
-          <th>CNPJ</th>
-        </tr>
-      </thead>
-      <tbody>
-        {linhas.map((linha) => (
-          <React.Fragment key={linha.linha}>
-            <tr
-              className="validador-tabela-row status-erro validador-tabela-row-erro"
-              style={{ borderBottom: '2px solid #e57373', borderLeft: '4px solid #e57373', background: '#fff6f6' }}
-            >
-              <td>
-                <div className="validador-tabela-circulo erro" style={{ background: 'linear-gradient(135deg, #ff5f6d 0%, #ffc371 100%)', color: '#fff', border: '1.5px solid #e57373' }}>
-                  {linha.linha}
-                </div>
-              </td>
-              <td>{linha.empresa?.toString().slice(0, 23)}</td>
-              <td>{linha.CNPJ}</td>
-            </tr>
-            <tr>
-                          <td colSpan={3} style={{ color: '#b71c1c', fontSize: 13, padding: '4px 12px 10px 32px', background: '#fff6f6', borderBottom: '2px solid #e57373' }}>
-              <strong>Motivo:</strong> {linha.motivo || linha.mensagemErro || linha.status || 'Erro desconhecido'}
-            </td>
-            </tr>
-          </React.Fragment>
-        ))}
-      </tbody>
-    </table>
+    <div>
+      <table className="validador-tabela validador-tabela-erro">
+        <thead>
+          <tr>
+            <th>Linha</th>
+            <th>Empresa</th>
+            <th>CNPJ</th>
+          </tr>
+        </thead>
+        <tbody>
+          {linhas.map((linha) => (
+            <React.Fragment key={linha.linha}>
+              <tr
+                className="validador-tabela-row status-erro validador-tabela-row-erro"
+                style={{ borderBottom: '2px solid #e57373', borderLeft: '4px solid #e57373', background: '#fff6f6' }}
+              >
+                <td>
+                  <div className="validador-tabela-circulo erro" style={{ background: 'linear-gradient(135deg, #ff5f6d 0%, #ffc371 100%)', color: '#fff', border: '1.5px solid #e57373' }}>
+                    {linha.linha}
+                  </div>
+                </td>
+                <td>{linha.empresa?.toString().slice(0, 23)}</td>
+                <td>{linha.CNPJ}</td>
+              </tr>
+              
+              {/* Linha de descrição da etapa para erros - REMOVIDA para evitar duplicação */}
+              {/* {(linha.stepName || linha.status) && !linha.isFinalizada && (
+                <tr className="validador-etapa-descricao erro">
+                  <td colSpan={3}>
+                    <div className="validador-etapa-info erro">
+                      <span className="validador-etapa-icone">
+                        ❌
+                      </span>
+                      <span className="validador-etapa-texto">
+                        {linha.stepName || getEtapaDescricao(linha.status)}
+                      </span>
+                      {linha.stepIndex && linha.stepTotal && (
+                        <span className="validador-etapa-contador">
+                          {linha.stepIndex}/{linha.stepTotal}
+                        </span>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              )} */}
+              
+              <tr>
+                <td colSpan={3} style={{ color: '#b71c1c', fontSize: 13, padding: '4px 12px 10px 32px', background: '#fff6f6', borderBottom: '2px solid #e57373' }}>
+                  <strong>Motivo:</strong> {linha.motivo || linha.mensagemErro || linha.status || 'Erro desconhecido'}
+                </td>
+              </tr>
+            </React.Fragment>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
 
