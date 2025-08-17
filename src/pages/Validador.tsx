@@ -73,6 +73,27 @@ export default function Validador() {
   const [linhaCaptchaAtual, setLinhaCaptchaAtual] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [globalProgress, setGlobalProgress] = useState<number>(0);
+  const [statusAutomacao, setStatusAutomacao] = useState<{ pausada: boolean; parada: boolean }>({ pausada: false, parada: false });
+
+  // Função para verificar o status da automação
+  const verificarStatusAutomacao = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/status-automacao`);
+      if (res.ok) {
+        const status = await res.json();
+        setStatusAutomacao(status);
+      }
+    } catch (error) {
+      console.error('Erro ao verificar status da automação:', error);
+    }
+  };
+
+  // Verifica o status da automação periodicamente
+  useEffect(() => {
+    const interval = setInterval(verificarStatusAutomacao, 2000); // Verifica a cada 2 segundos
+    return () => clearInterval(interval);
+  }, []);
+
 // Captura o captcha enviado pelo backend via socket e exibe para o usuário
 useEffect(() => {
   function handleCaptcha(data: CaptchaEvent) {
@@ -304,29 +325,62 @@ function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
 
   const executarValidacao = async () => {
   try {
-    const res = await fetch(`${API_BASE_URL}/api/executar-validacao`, {
+    console.log('🚀 [FRONTEND] Iniciando validação...');
+    
+    // Primeiro, reseta os controles para permitir nova execução
+    if (statusAutomacao.parada || statusAutomacao.pausada) {
+      console.log('🔄 [FRONTEND] Resetando controles antes de executar...');
+      try {
+        const resReset = await fetch(`${API_BASE_URL}/api/resetar-controles`, { 
+          method: "POST" 
+        });
+        if (resReset.ok) {
+          const resultadoReset = await resReset.json();
+          console.log('✅ [FRONTEND] Controles resetados:', resultadoReset.mensagem);
+          // Atualiza o status local
+          setStatusAutomacao({ pausada: false, parada: false });
+        } else {
+          console.warn('⚠️ [FRONTEND] Não foi possível resetar controles, mas continuando...');
+        }
+      } catch (error) {
+        console.warn('⚠️ [FRONTEND] Erro ao resetar controles, mas continuando:', error);
+      }
+    }
+
+    console.log('🚀 [FRONTEND] Parâmetros:', {
+      contabilidade: empresa.nome,
+      modoLogin,
+      modoResolucao: resolucao,
+      qtdNavegadores: 'SEMPRE 8 (fixo no backend)'
+    });
+
+    const res = await fetch(`${API_BASE_URL}/executar-validacao`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-      contabilidade: empresa.nome,
-      modoLogin,
-      modoResolucao: resolucao,
-      qtdNavegadores,
+        contabilidade: empresa.nome,
+        modoLogin,
+        modoResolucao: resolucao,
+        // qtdNavegadores é ignorado pelo backend (sempre 8)
+        linhas: linhasAtivas.map(l => l.linha) // Envia linhas específicas se houver
       }),
     });
 
     const resultado = await res.json();
+    console.log('🚀 [FRONTEND] Resposta do backend:', resultado);
 
     if (resultado.sucesso) {
-      alert("✅ Validação concluida com sucesso!");
+      alert("✅ Validação iniciada com sucesso! O sistema usará 8 navegadores automaticamente.");
+      // Atualiza o status para mostrar que está ativa
+      setStatusAutomacao({ pausada: false, parada: false });
     } else {
-      alert("❌ Erro ao iniciar validação: " + resultado.erro);
+      alert("❌ Erro ao iniciar validação: " + (resultado.erro || 'Erro desconhecido'));
     }
   } catch (error) {
-    console.error("Erro ao executar validação:", error);
-    alert("Erro ao executar validação.");
+    console.error("❌ [FRONTEND] Erro ao executar validação:", error);
+    alert("❌ Erro ao executar validação: " + (error instanceof Error ? error.message : 'Erro desconhecido'));
   }
 };
 
@@ -507,6 +561,30 @@ function handleCaptchaInputChange(e: React.ChangeEvent<HTMLInputElement>) {
   }
 }
 
+  // Função para resetar a tela
+  const resetarTela = () => {
+    // Limpa todas as linhas ativas
+    setLinhasAtivas([]);
+    // Limpa linhas com erro
+    setLinhasComErro([]);
+    // Limpa respostas de captcha
+    setRespostaCaptcha({});
+    // Limpa imagem do captcha
+    setCaptchaImgBase64(null);
+    // Limpa input do captcha
+    setCaptchaInput("");
+    // Reseta linha do captcha atual
+    setLinhaCaptchaAtual(null);
+    // Reseta progresso global
+    setGlobalProgress(0);
+    // Reseta status da automação
+    setStatusAutomacao({ pausada: false, parada: false });
+    // Limpa o input de arquivo
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
 return (
   <div className="validador-container">
     <div className="validador-top-row">
@@ -570,14 +648,21 @@ return (
             </div>
             <span className="validador-progress-label">{globalProgress}%</span>
           </div>
-          <button className="validador-btn-executar" type="button" onClick={executarValidacao}>
-            Executar
+          
+          <button 
+            className="validador-btn-executar" 
+            type="button" 
+            onClick={executarValidacao}
+            disabled={linhasAtivas.length === 0}
+          >
+            {linhasAtivas.length === 0 ? 'Sem Linhas' : 'Executar'}
           </button>
         <button className="validador-btn-executar" type="button" onClick={salvarNoBackend}>
           Salvar
         </button>
       </div>
       <div className="validador-actions-right">
+
         <button
           className="validador-btn-exportar"
           type="button"
@@ -590,11 +675,58 @@ return (
           type="button"
           style={{ marginTop: 12 }}
           onClick={async () => {
-            await fetch(`${API_BASE_URL}/api/parar-automacao`, { method: "POST" });
-            alert("Automação parada!");
+            try {
+              console.log('🛑 [FRONTEND] Parando automação...');
+              const res = await fetch(`${API_BASE_URL}/api/parar-automacao`, { 
+                method: "POST" 
+              });
+              const resultado = await res.json();
+              
+              if (resultado.sucesso) {
+                alert("⏹️ Automação parada com sucesso!");
+                console.log('✅ [FRONTEND] Automação parada:', resultado.mensagem);
+                // Atualiza o status imediatamente
+                setStatusAutomacao(prev => ({ ...prev, parada: true }));
+              } else {
+                alert("❌ Erro ao parar automação: " + (resultado.erro || 'Erro desconhecido'));
+              }
+            } catch (error) {
+              console.error('❌ [FRONTEND] Erro ao parar automação:', error);
+              alert("❌ Erro ao parar automação: " + (error instanceof Error ? error.message : 'Erro desconhecido'));
+            }
+          }}
+          disabled={statusAutomacao.parada}
+        >
+          {statusAutomacao.parada ? 'Automação Parada' : 'Parar Automação'}
+        </button>
+
+        <button
+          className="validador-btn-executar"
+          type="button"
+          style={{ marginTop: 8 }}
+          onClick={async () => {
+            try {
+              console.log('🔄 [FRONTEND] Resetando controles...');
+              const res = await fetch(`${API_BASE_URL}/api/resetar-controles`, { 
+                method: "POST" 
+              });
+              const resultado = await res.json();
+              
+              if (resultado.sucesso) {
+                alert("🔄 Controles resetados com sucesso!");
+                console.log('✅ [FRONTEND] Controles resetados:', resultado.mensagem);
+                // Reseta a tela após resetar os controles no backend
+                resetarTela();
+              } else {
+                alert("❌ Erro ao resetar controles: " + (resultado.erro || 'Erro desconhecido'));
+              }
+            } catch (error) {
+              console.error('❌ [FRONTEND] Erro ao resetar controles:', error);
+              alert("❌ Erro ao resetar controles: " + (error instanceof Error ? error.message : 'Erro desconhecido'));
+            }
           }}
         >
-          Parar Automação
+          Resetar Controles
         </button>
       </div>
     </div>
