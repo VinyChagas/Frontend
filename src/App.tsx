@@ -9,6 +9,7 @@ import Validador from "./pages/Validador";
 import Contabilidades from "./pages/Contabilidades";
 import ContabilidadeForm from "./pages/ContabilidadeForm";
 import Automacao from "./pages/Automacao";
+import Parametros from "./pages/Parametros";
 
 function AnimatedRoutes() {
   const location = useLocation();
@@ -26,6 +27,7 @@ function AnimatedRoutes() {
           <Route path="contabilidades/novo" element={<ContabilidadeForm />} />
           <Route path="contabilidades/:id" element={<ContabilidadeForm />} />
           <Route path="automacao" element={<Automacao />} />
+          <Route path="parametros" element={<Parametros />} />
         </Route>
       </Routes>
     </AnimatePresence>

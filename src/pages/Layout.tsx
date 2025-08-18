@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
-import { User, House, FileText, Users, PiggyBank, LogOut, KeyRound, ChevronDown, Eye, CheckCircle } from "lucide-react";
+import { User, House, FileText, Users, PiggyBank, LogOut, KeyRound, ChevronDown, Eye, CheckCircle, Settings, Play } from "lucide-react";
 import "../styles/Home.scss";
 import "../styles/Layout.scss"; // Adicione um novo arquivo para estilos do layout
 
@@ -9,7 +9,9 @@ const SIDEBAR_ITEMS = [
   { label: "Contabilidades", icon: <Users size={20} />, route: "/contabilidades" },
   { label: "Relatórios", icon: <FileText size={20} />, route: "/relatorios" },
   { label: "C. Custo", icon: <PiggyBank size={20} />, route: "/centro-custo" },
-  { label: "Validação", icon: <CheckCircle size={20} />, route: "/validador" }, // Nova opção adicionada
+  { label: "Validação", icon: <CheckCircle size={20} />, route: "/validador" },
+  { label: "Automação", icon: <Play size={20} />, route: "/automacao" },
+  { label: "Parâmetros", icon: <Settings size={20} />, route: "/parametros" },
 ];
 
 export default function Layout() {

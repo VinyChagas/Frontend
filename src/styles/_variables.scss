@@ -1,2 +1,20 @@
-$primary: #007bff;
-$gray: #6c757d;
+// Cores principais
+$primary-color: #007bff;
+$secondary-color: #6c757d;
+$success-color: #28a745;
+$info-color: #17a2b8;
+$warning-color: #ffc107;
+$error-color: #dc3545;
+
+// Cores de fundo e texto
+$background-color: #f8f9fa;
+$text-color: #212529;
+$border-color: #dee2e6;
+
+// Cores de estado
+$hover-color: #0056b3;
+$disabled-color: #6c757d;
+
+// Variáveis legadas para compatibilidade
+$primary: $primary-color;
+$gray: $secondary-color;

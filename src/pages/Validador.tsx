@@ -613,9 +613,8 @@ function renderTabelaErros(linhas: Linha[]) {
 }
 
 // ListaStatusEmpresas removido pois não é utilizado
-const [modoLogin,      setModoLogin]      = useState<'automatico' | 'manual'>('manual');
-const [resolucao,      setResolucao]      = useState<'FHD' | 'QHD'>('FHD');
-const [qtdNavegadores, setQtdNavegadores] = useState<number>(1);
+const [modoLogin] = useState<'automatico' | 'manual'>('manual');
+const [resolucao] = useState<'FHD' | 'QHD'>('FHD');
 
 const captchaTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
