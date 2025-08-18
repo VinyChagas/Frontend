@@ -639,226 +639,223 @@ export default function Validador() {
   };
 
   return (
-    <div className="automacao-container">
-      <div className="automacao-header">
-        <div className="header-content">
-          <div className="header-info">
-            <h1>{empresa.nome}</h1>
-            <div className="empresa-dados">
-              <span><strong>CNPJ:</strong> {empresa.cnpj}</span>
-              <span><strong>Clientes:</strong> {empresa.clientes}</span>
-            </div>
-          </div>
-          <div className="header-actions">
-            <input
-              id="input-planilha"
-              type="file"
-              accept=".xlsx,.xls,.csv"
-              style={{ display: "none" }}
-              ref={fileInputRef}
-              onChange={handleFileChange}
-            />
-            <button onClick={handleImportarClick} className="automacao-btn btn-primary">
-              Importar Planilha
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <div className="automacao-actions-bar">
-        <div className="actions-grid">
-          <div className="action-group">
-            <div className="group-title">Captcha</div>
-            {/* Exibe o card de captcha somente se modoLogin for 'manual' */}
-            {modoLogin === 'manual' && (
-              <div className="automacao-captcha-card">
-                <div className="captcha-header">
-                  <div className="captcha-icon">🔐</div>
-                  <span className="captcha-label">Captcha:</span>
-                </div>
-                <div className="captcha-content">
-                  <div className="captcha-image-area">
-                    {captchaImgBase64 ? (
-                      <img src={`data:image/png;base64,${captchaImgBase64}`} alt="captcha" />
-                    ) : (
-                      <span className="placeholder">Aguardando...</span>
-                    )}
-                  </div>
-                  <input
-                    className="captcha-input"
-                    type="text"
-                    maxLength={5}
-                    pattern="[0-9]*"
-                    inputMode="numeric"
-                    value={captchaInput}
-                    onChange={handleCaptchaInputChange}
-                    placeholder="00000"
-                  />
+    <div className="automacao-page-container">
+      <div className="automacao-card">
+        <div className="automacao-container">
+          <div className="automacao-header">
+            <div className="header-content">
+              <div className="header-info">
+                <h1>{empresa.nome}</h1>
+                <div className="empresa-dados">
+                  <span><strong>CNPJ:</strong> {empresa.cnpj}</span>
+                  <span><strong>Clientes:</strong> {empresa.clientes}</span>
                 </div>
               </div>
-            )}
-          </div>
-
-          <div className="action-group">
-            <div className="group-title">Progresso</div>
-            <div className="automacao-global-progress">
-              <div className="progress-header">
-                <h3>Progresso Global</h3>
-                <div className="progress-percentage">{globalProgress}%</div>
-              </div>
-              <div className="progress-track">
-                <div
-                  className={`progress-bar ${globalProgress >= 100 ? 'sucesso' : globalProgress === 0 ? 'carregando' : 'carregando'}`}
-                  style={{ width: `${Math.max(0, Math.min(100, globalProgress))}%` }}
+              <div className="header-actions">
+                <input
+                  id="input-planilha"
+                  type="file"
+                  accept=".xlsx,.xls,.csv"
+                  style={{ display: "none" }}
+                  ref={fileInputRef}
+                  onChange={handleFileChange}
                 />
+                <button onClick={handleImportarClick} className="automacao-btn btn-primary">
+                  Importar Planilha
+                </button>
               </div>
             </div>
           </div>
 
-          <div className="action-group">
-            <div className="group-title">Ações</div>
-            <div className="control-buttons">
-              <button 
-                className="automacao-btn btn-primary" 
-                type="button" 
-                onClick={executarValidacao}
-                disabled={linhasAtivas.length === 0}
-              >
-                {linhasAtivas.length === 0 ? 'Sem Linhas' : 'Executar'}
-              </button>
-              <button className="automacao-btn btn-success" type="button" onClick={salvarNoBackend}>
-                Salvar
-              </button>
-            </div>
-          </div>
+          <div className="automacao-actions-bar">
+            <div className="actions-grid">
+              <div className="action-group">
+                <div className="group-title">Captcha</div>
+                {/* Exibe o card de captcha somente se modoLogin for 'manual' */}
+                {modoLogin === 'manual' && (
+                  <div className="automacao-captcha-card">
+                    <div className="captcha-header">
+                      <div className="captcha-icon">🔐</div>
+                      <span className="captcha-label">Captcha:</span>
+                    </div>
+                    <div className="captcha-content">
+                      <div className="captcha-image-area">
+                        {captchaImgBase64 ? (
+                          <img src={`data:image/png;base64,${captchaImgBase64}`} alt="captcha" />
+                        ) : (
+                          <span className="placeholder">Aguardando...</span>
+                        )}
+                      </div>
+                      <input
+                        className="captcha-input"
+                        type="text"
+                        maxLength={5}
+                        pattern="[0-9]*"
+                        inputMode="numeric"
+                        value={captchaInput}
+                        onChange={handleCaptchaInputChange}
+                        placeholder="00000"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
 
-          <div className="action-group">
-            <div className="group-title">Controles</div>
-            <div className="control-buttons">
-              <button
-                className="automacao-btn btn-warning"
-                type="button"
-                onClick={async () => {
-                  try {
-                    if (statusAutomacao.pausada) {
-                      console.log('▶️ [FRONTEND] Continuando automação...');
-                      const res = await fetch(`${API_BASE_URL}/api/continuar-automacao`, { 
-                        method: "POST" 
-                      });
-                      const resultado = await res.json();
-                      
-                      if (resultado.sucesso) {
-                        alert("▶️ Automação continuada com sucesso!");
-                        setStatusAutomacao(prev => ({ ...prev, pausada: false }));
-                      } else {
-                        alert("❌ Erro ao continuar automação: " + (resultado.erro || 'Erro desconhecido'));
+              <div className="action-group">
+                <div className="group-title">Progresso</div>
+                <div className="automacao-global-progress">
+                  <div className="progress-header">
+                    <h3>Progresso Global</h3>
+                    <div className="progress-percentage">{globalProgress}%</div>
+                  </div>
+                  <div className="progress-track">
+                    <div
+                      className={`progress-bar ${globalProgress >= 100 ? 'sucesso' : globalProgress === 0 ? 'carregando' : 'carregando'}`}
+                      style={{ width: `${Math.max(0, Math.min(100, globalProgress))}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="action-group">
+                <div className="group-title">Ações</div>
+                <div className="control-buttons">
+                  <button 
+                    className="automacao-btn btn-primary" 
+                    type="button" 
+                    onClick={executarValidacao}
+                    disabled={linhasAtivas.length === 0}
+                  >
+                    {linhasAtivas.length === 0 ? 'Sem Linhas' : 'Executar'}
+                  </button>
+                  <button className="automacao-btn btn-success" type="button" onClick={salvarNoBackend}>
+                    Salvar
+                  </button>
+                  <button
+                    className="automacao-btn btn-success"
+                    type="button"
+                  >
+                    Exportar PDF
+                  </button>
+                </div>
+              </div>
+              <div className="action-group">
+                <div className="group-title">Controles</div>
+                <div className="control-buttons">
+                  <button
+                    className="automacao-btn btn-warning"
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        if (statusAutomacao.pausada) {
+                          console.log('▶️ [FRONTEND] Continuando automação...');
+                          const res = await fetch(`${API_BASE_URL}/api/continuar-automacao`, { 
+                            method: "POST" 
+                          });
+                          const resultado = await res.json();
+                          
+                          if (resultado.sucesso) {
+                            alert("▶️ Automação continuada com sucesso!");
+                            setStatusAutomacao(prev => ({ ...prev, pausada: false }));
+                          } else {
+                            alert("❌ Erro ao continuar automação: " + (resultado.erro || 'Erro desconhecido'));
+                          }
+                        } else {
+                          console.log('⏸️ [FRONTEND] Pausando automação...');
+                          const res = await fetch(`${API_BASE_URL}/api/pausar-automacao`, { 
+                            method: "POST" 
+                          });
+                          const resultado = await res.json();
+                          
+                          if (resultado.sucesso) {
+                            alert("⏸️ Automação pausada com sucesso!");
+                            setStatusAutomacao(prev => ({ ...prev, pausada: true }));
+                          } else {
+                            alert("❌ Erro ao pausar automação: " + (resultado.erro || 'Erro desconhecido'));
+                          }
+                        }
+                      } catch (error) {
+                        console.error('❌ [FRONTEND] Erro ao controlar automação:', error);
+                        alert("❌ Erro ao controlar automação: " + (error instanceof Error ? error.message : 'Erro desconhecido'));
                       }
-                    } else {
-                      console.log('⏸️ [FRONTEND] Pausando automação...');
-                      const res = await fetch(`${API_BASE_URL}/api/pausar-automacao`, { 
-                        method: "POST" 
-                      });
-                      const resultado = await res.json();
-                      
-                      if (resultado.sucesso) {
-                        alert("⏸️ Automação pausada com sucesso!");
-                        setStatusAutomacao(prev => ({ ...prev, pausada: true }));
-                      } else {
-                        alert("❌ Erro ao pausar automação: " + (resultado.erro || 'Erro desconhecido'));
+                    }}
+                    disabled={statusAutomacao.parada}
+                  >
+                    {statusAutomacao.pausada ? '▶️ Continuar' : '⏸️ Pausar'}
+                  </button>
+
+                  <button
+                    className="automacao-btn btn-danger"
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        console.log('🛑 [FRONTEND] Parando automação...');
+                        const res = await fetch(`${API_BASE_URL}/api/parar-automacao`, { 
+                          method: "POST" 
+                        });
+                        const resultado = await res.json();
+                        
+                        if (resultado.sucesso) {
+                          alert("⏹️ Automação parada com sucesso!");
+                          console.log('✅ [FRONTEND] Automação parada:', resultado.mensagem);
+                          // Atualiza o status imediatamente
+                          setStatusAutomacao(prev => ({ ...prev, parada: true }));
+                        } else {
+                          alert("❌ Erro ao parar automação: " + (resultado.erro || 'Erro desconhecido'));
+                        }
+                      } catch (error) {
+                        console.error('❌ [FRONTEND] Erro ao parar automação:', error);
+                        alert("❌ Erro ao parar automação: " + (error instanceof Error ? error.message : 'Erro desconhecido'));
                       }
-                    }
-                  } catch (error) {
-                    console.error('❌ [FRONTEND] Erro ao controlar automação:', error);
-                    alert("❌ Erro ao controlar automação: " + (error instanceof Error ? error.message : 'Erro desconhecido'));
-                  }
-                }}
-                disabled={statusAutomacao.parada}
-              >
-                {statusAutomacao.pausada ? '▶️ Continuar' : '⏸️ Pausar'}
-              </button>
+                    }}
+                    disabled={statusAutomacao.parada}
+                  >
+                    {statusAutomacao.parada ? 'Automação Parada' : 'Parar Automação'}
+                  </button>
 
-              <button
-                className="automacao-btn btn-danger"
-                type="button"
-                onClick={async () => {
-                  try {
-                    console.log('🛑 [FRONTEND] Parando automação...');
-                    const res = await fetch(`${API_BASE_URL}/api/parar-automacao`, { 
-                      method: "POST" 
-                    });
-                    const resultado = await res.json();
-                    
-                    if (resultado.sucesso) {
-                      alert("⏹️ Automação parada com sucesso!");
-                      console.log('✅ [FRONTEND] Automação parada:', resultado.mensagem);
-                      // Atualiza o status imediatamente
-                      setStatusAutomacao(prev => ({ ...prev, parada: true }));
-                    } else {
-                      alert("❌ Erro ao parar automação: " + (resultado.erro || 'Erro desconhecido'));
-                    }
-                  } catch (error) {
-                    console.error('❌ [FRONTEND] Erro ao parar automação:', error);
-                    alert("❌ Erro ao parar automação: " + (error instanceof Error ? error.message : 'Erro desconhecido'));
-                  }
-                }}
-                disabled={statusAutomacao.parada}
-              >
-                {statusAutomacao.parada ? 'Automação Parada' : 'Parar Automação'}
-              </button>
-
-              <button
-                className="automacao-btn btn-secondary"
-                type="button"
-                onClick={async () => {
-                  try {
-                    console.log('🔄 [FRONTEND] Resetando controles...');
-                    const res = await fetch(`${API_BASE_URL}/api/resetar-controles`, { 
-                      method: "POST" 
-                    });
-                    const resultado = await res.json();
-                    
-                    if (resultado.sucesso) {
-                      alert("🔄 Controles resetados com sucesso!");
-                      console.log('✅ [FRONTEND] Controles resetados:', resultado.mensagem);
-                      // Reseta a tela após resetar os controles no backend
-                      resetarTela();
-                    } else {
-                      alert("❌ Erro ao resetar controles: " + (resultado.erro || 'Erro desconhecido'));
-                    }
-                  } catch (error) {
-                    console.error('❌ [FRONTEND] Erro ao resetar controles:', error);
-                    alert("❌ Erro ao resetar controles: " + (error instanceof Error ? error.message : 'Erro desconhecido'));
-                  }
-                }}
-              >
-                Resetar Controles
-              </button>
+                  <button
+                    className="automacao-btn btn-secondary"
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        console.log('🔄 [FRONTEND] Resetando controles...');
+                        const res = await fetch(`${API_BASE_URL}/api/resetar-controles`, { 
+                          method: "POST" 
+                        });
+                        const resultado = await res.json();
+                        
+                        if (resultado.sucesso) {
+                          alert("🔄 Controles resetados com sucesso!");
+                          console.log('✅ [FRONTEND] Controles resetados:', resultado.mensagem);
+                          // Reseta a tela após resetar os controles no backend
+                          resetarTela();
+                        } else {
+                          alert("❌ Erro ao resetar controles: " + (resultado.erro || 'Erro desconhecido'));
+                        }
+                      } catch (error) {
+                        console.error('❌ [FRONTEND] Erro ao resetar controles:', error);
+                        alert("❌ Erro ao resetar controles: " + (error instanceof Error ? error.message : 'Erro desconhecido'));
+                      }
+                    }}
+                  >
+                    Resetar Controles
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
 
-          <div className="action-group">
-            <div className="group-title">Exportar</div>
-            <div className="control-buttons">
-              <button
-                className="automacao-btn btn-success"
-                type="button"
-              >
-                Exportar PDF
-              </button>
+          <div className="automacao-tabela-container">
+            <div className="tabela-dupla">
+              <div className="tabela-wrapper">
+                <div className="tabela-titulo">Linhas Ativas</div>
+                {renderTabela(linhasAtivas)}
+              </div>
+              <div className="tabela-wrapper">
+                <div className="tabela-titulo">Linhas com Erro</div>
+                {renderTabelaErros(linhasComErro)}
+              </div>
             </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="automacao-tabela-container">
-        <div className="tabela-dupla">
-          <div className="tabela-wrapper">
-            <div className="tabela-titulo">Linhas Ativas</div>
-            {renderTabela(linhasAtivas)}
-          </div>
-          <div className="tabela-wrapper">
-            <div className="tabela-titulo">Linhas com Erro</div>
-            {renderTabelaErros(linhasComErro)}
           </div>
         </div>
       </div>

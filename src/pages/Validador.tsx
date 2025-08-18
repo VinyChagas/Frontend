@@ -654,154 +654,159 @@ function handleCaptchaInputChange(e: React.ChangeEvent<HTMLInputElement>) {
   };
 
 return (
-  <div className="validador-container">
-    <div className="validador-top-row">
-      <div className="validador-header-info">
-        <h1 className="validador-titulo">{empresa.nome}</h1>
-        <div className="validador-empresa-dados">
-          <span><strong>CNPJ:</strong> {empresa.cnpj}</span>
-          <span><strong>Clientes:</strong> {empresa.clientes}</span>
+  <div className="validador-page-container">
+    <div className="validador-card">
+      {/* Todo o conteúdo da tela */}
+      <div className="validador-container">
+        <div className="validador-top-row">
+          <div className="validador-header-info">
+            <h1 className="validador-titulo">{empresa.nome}</h1>
+            <div className="validador-empresa-dados">
+              <span><strong>CNPJ:</strong> {empresa.cnpj}</span>
+              <span><strong>Clientes:</strong> {empresa.clientes}</span>
+            </div>
+          </div>
+          <div>
+            <input
+              id="input-planilha"
+              type="file"
+              accept=".xlsx,.xls,.csv"
+              style={{ display: "none" }}
+              ref={fileInputRef}
+              onChange={handleFileChange}
+            />
+            <button onClick={handleImportarClick} className="validador-importar-btn">
+              Importar Planilha
+            </button>
+          </div>
+        </div>
+
+        <div className="validador-actions-bar">
+          <div className="validador-actions-left">
+            {/* Removido label e selects de modo, resolução e navegadores */}
+            {/* Exibe o card de captcha somente se modoLogin for 'manual' */}
+            {modoLogin === 'manual' && (
+              <div className="validador-captcha-card">
+                <span className="validador-captcha-label">Captcha:</span>
+                <div className="validador-captcha-img-area">
+                  {captchaImgBase64 ? (
+                    <img src={`data:image/png;base64,${captchaImgBase64}`} alt="captcha" />
+                  ) : (
+                    <span style={{ color: "#2563eb", opacity: 0.7, fontWeight: 600, fontSize: 13 }}></span>
+                  )}
+                </div>
+                <input
+                  className="validador-captcha-input"
+                  type="text"
+                  maxLength={5}
+                  pattern="[0-9]*"
+                  inputMode="numeric"
+                  value={captchaInput}
+                  onChange={handleCaptchaInputChange}
+                  placeholder="00000"
+                />
+              </div>
+            )}
+          </div>
+          <div className="validador-actions-center">
+              {/* Progresso global */}
+              <div className="validador-global-progress">
+                <div className="validador-progress-track">
+                  <div
+                    className={`validador-progress-bar ${globalProgress >= 100 ? 'sucesso' : globalProgress === 0 ? 'carregando' : 'carregando'}`}
+                    style={{ width: `${Math.max(0, Math.min(100, globalProgress))}%` }}
+                  />
+                </div>
+                <span className="validador-progress-label">{globalProgress}%</span>
+              </div>
+              
+              <button 
+                className="validador-btn-executar" 
+                type="button" 
+                onClick={executarValidacao}
+                disabled={linhasAtivas.length === 0}
+              >
+                {linhasAtivas.length === 0 ? 'Sem Linhas' : 'Executar'}
+              </button>
+            <button className="validador-btn-executar" type="button" onClick={salvarNoBackend}>
+              Salvar
+            </button>
+          </div>
+          <div className="validador-actions-right">
+
+            <button
+              className="validador-btn-exportar"
+              type="button"
+            >
+              Exportar PDF
+            </button>
+            
+            <button
+              className="validador-btn-executar"
+              type="button"
+              style={{ marginTop: 12 }}
+              onClick={async () => {
+                try {
+                  console.log('🛑 [FRONTEND] Parando automação...');
+                  const res = await fetch(`${API_BASE_URL}/api/parar-automacao`, { 
+                    method: "POST" 
+                  });
+                  const resultado = await res.json();
+                  
+                  if (resultado.sucesso) {
+                    alert("⏹️ Automação parada com sucesso!");
+                    console.log('✅ [FRONTEND] Automação parada:', resultado.mensagem);
+                    // Atualiza o status imediatamente
+                    setStatusAutomacao(prev => ({ ...prev, parada: true }));
+                  } else {
+                    alert("❌ Erro ao parar automação: " + (resultado.erro || 'Erro desconhecido'));
+                  }
+                } catch (error) {
+                  console.error('❌ [FRONTEND] Erro ao parar automação:', error);
+                  alert("❌ Erro ao parar automação: " + (error instanceof Error ? error.message : 'Erro desconhecido'));
+                }
+              }}
+              disabled={statusAutomacao.parada}
+            >
+              {statusAutomacao.parada ? 'Automação Parada' : 'Parar Automação'}
+            </button>
+
+            <button
+              className="validador-btn-executar"
+              type="button"
+              style={{ marginTop: 8 }}
+              onClick={async () => {
+                try {
+                  console.log('🔄 [FRONTEND] Resetando controles...');
+                  const res = await fetch(`${API_BASE_URL}/api/resetar-controles`, { 
+                    method: "POST" 
+                  });
+                  const resultado = await res.json();
+                  
+                  if (resultado.sucesso) {
+                    alert("🔄 Controles resetados com sucesso!");
+                    console.log('✅ [FRONTEND] Controles resetados:', resultado.mensagem);
+                    // Reseta a tela após resetar os controles no backend
+                    resetarTela();
+                  } else {
+                    alert("❌ Erro ao resetar controles: " + (resultado.erro || 'Erro desconhecido'));
+                  }
+                } catch (error) {
+                  console.error('❌ [FRONTEND] Erro ao resetar controles:', error);
+                  alert("❌ Erro ao resetar controles: " + (error instanceof Error ? error.message : 'Erro desconhecido'));
+                }
+              }}
+            >
+              Resetar Controles
+            </button>
+          </div>
+        </div>
+
+        <div className="validador-tabela-dupla">
+          <div>{renderTabela(linhasAtivas)}</div>
+          <div>{renderTabelaErros(linhasComErro)}</div>
         </div>
       </div>
-      <div>
-        <input
-          id="input-planilha"
-          type="file"
-          accept=".xlsx,.xls,.csv"
-          style={{ display: "none" }}
-          ref={fileInputRef}
-          onChange={handleFileChange}
-        />
-        <button onClick={handleImportarClick} className="validador-importar-btn">
-          Importar Planilha
-        </button>
-      </div>
-    </div>
-
-    <div className="validador-actions-bar">
-      <div className="validador-actions-left">
-        {/* Removido label e selects de modo, resolução e navegadores */}
-        {/* Exibe o card de captcha somente se modoLogin for 'manual' */}
-        {modoLogin === 'manual' && (
-          <div className="validador-captcha-card">
-            <span className="validador-captcha-label">Captcha:</span>
-            <div className="validador-captcha-img-area">
-              {captchaImgBase64 ? (
-                <img src={`data:image/png;base64,${captchaImgBase64}`} alt="captcha" />
-              ) : (
-                <span style={{ color: "#2563eb", opacity: 0.7, fontWeight: 600, fontSize: 13 }}></span>
-              )}
-            </div>
-            <input
-              className="validador-captcha-input"
-              type="text"
-              maxLength={5}
-              pattern="[0-9]*"
-              inputMode="numeric"
-              value={captchaInput}
-              onChange={handleCaptchaInputChange}
-              placeholder="00000"
-            />
-          </div>
-        )}
-      </div>
-      <div className="validador-actions-center">
-          {/* Progresso global */}
-          <div className="validador-global-progress">
-            <div className="validador-progress-track">
-              <div
-                className={`validador-progress-bar ${globalProgress >= 100 ? 'sucesso' : globalProgress === 0 ? 'carregando' : 'carregando'}`}
-                style={{ width: `${Math.max(0, Math.min(100, globalProgress))}%` }}
-              />
-            </div>
-            <span className="validador-progress-label">{globalProgress}%</span>
-          </div>
-          
-          <button 
-            className="validador-btn-executar" 
-            type="button" 
-            onClick={executarValidacao}
-            disabled={linhasAtivas.length === 0}
-          >
-            {linhasAtivas.length === 0 ? 'Sem Linhas' : 'Executar'}
-          </button>
-        <button className="validador-btn-executar" type="button" onClick={salvarNoBackend}>
-          Salvar
-        </button>
-      </div>
-      <div className="validador-actions-right">
-
-        <button
-          className="validador-btn-exportar"
-          type="button"
-        >
-          Exportar PDF
-        </button>
-        
-        <button
-          className="validador-btn-executar"
-          type="button"
-          style={{ marginTop: 12 }}
-          onClick={async () => {
-            try {
-              console.log('🛑 [FRONTEND] Parando automação...');
-              const res = await fetch(`${API_BASE_URL}/api/parar-automacao`, { 
-                method: "POST" 
-              });
-              const resultado = await res.json();
-              
-              if (resultado.sucesso) {
-                alert("⏹️ Automação parada com sucesso!");
-                console.log('✅ [FRONTEND] Automação parada:', resultado.mensagem);
-                // Atualiza o status imediatamente
-                setStatusAutomacao(prev => ({ ...prev, parada: true }));
-              } else {
-                alert("❌ Erro ao parar automação: " + (resultado.erro || 'Erro desconhecido'));
-              }
-            } catch (error) {
-              console.error('❌ [FRONTEND] Erro ao parar automação:', error);
-              alert("❌ Erro ao parar automação: " + (error instanceof Error ? error.message : 'Erro desconhecido'));
-            }
-          }}
-          disabled={statusAutomacao.parada}
-        >
-          {statusAutomacao.parada ? 'Automação Parada' : 'Parar Automação'}
-        </button>
-
-        <button
-          className="validador-btn-executar"
-          type="button"
-          style={{ marginTop: 8 }}
-          onClick={async () => {
-            try {
-              console.log('🔄 [FRONTEND] Resetando controles...');
-              const res = await fetch(`${API_BASE_URL}/api/resetar-controles`, { 
-                method: "POST" 
-              });
-              const resultado = await res.json();
-              
-              if (resultado.sucesso) {
-                alert("🔄 Controles resetados com sucesso!");
-                console.log('✅ [FRONTEND] Controles resetados:', resultado.mensagem);
-                // Reseta a tela após resetar os controles no backend
-                resetarTela();
-              } else {
-                alert("❌ Erro ao resetar controles: " + (resultado.erro || 'Erro desconhecido'));
-              }
-            } catch (error) {
-              console.error('❌ [FRONTEND] Erro ao resetar controles:', error);
-              alert("❌ Erro ao resetar controles: " + (error instanceof Error ? error.message : 'Erro desconhecido'));
-            }
-          }}
-        >
-          Resetar Controles
-        </button>
-      </div>
-    </div>
-
-    <div className="validador-tabela-dupla">
-      <div>{renderTabela(linhasAtivas)}</div>
-      <div>{renderTabelaErros(linhasComErro)}</div>
     </div>
   </div>
 );

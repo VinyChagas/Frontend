@@ -1072,5 +1072,51 @@
   }
 }
 
+.automacao-page-container {
+  min-height: 100vh;
+  background: #f5f6fa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+.automacao-card {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.10);
+  max-width: 1700px; // aumente a largura máxima
+  width: 100%;
+  padding: 4rem 2rem 2.5rem 2rem; // mais espaço no topo, menos na base
+  margin: 2rem 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 80vh;
+}
+
+// Ajuste para os botões ficarem bem distribuídos
+.control-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: center;
+}
+
+// Responsividade para telas menores
+@media (max-width: 900px) {
+  .automacao-card {
+    padding: 2.5rem 0.5rem 1.2rem 0.5rem;
+    max-width: 99vw;
+  }
+  .automacao-page-container {
+    padding: 0.5rem;
+  }
+  .control-buttons {
+    flex-direction: column;
+    gap: 0.5rem;
+    align-items: stretch;
+  }
+}
+
 
 
