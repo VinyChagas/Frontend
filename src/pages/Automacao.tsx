@@ -61,7 +61,15 @@ interface CaptchaEvent {
   imagem: string;
 }
 
+// Tipos para o modal de seleção
+type ModoExecucao = 'a-partir' | 'intervalo' | 'selecionadas';
 
+interface ModalSelecaoProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: (modo: ModoExecucao, linhas: number[]) => void;
+  totalLinhas: number;
+}
 
 const socket = io(API_BASE_URL);
 
@@ -76,6 +84,14 @@ export default function Validador() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [globalProgress, setGlobalProgress] = useState<number>(0);
   const [statusAutomacao, setStatusAutomacao] = useState<{ pausada: boolean; parada: boolean }>({ pausada: false, parada: false });
+  
+  // Estados para o modal de seleção
+  const [showModalSelecao, setShowModalSelecao] = useState(false);
+  const [todasLinhasImportadas, setTodasLinhasImportadas] = useState<Linha[]>([]);
+  const [modoExecucaoSelecionado, setModoExecucaoSelecionado] = useState<ModoExecucao>('a-partir');
+  const [linhaInicial, setLinhaInicial] = useState<number>(0);
+  const [linhaFinal, setLinhaFinal] = useState<number>(0);
+  const [linhasSelecionadas, setLinhasSelecionadas] = useState<number[]>([]);
 
   // Função para traduzir status em descrições amigáveis compatíveis com o backend
   const getEtapaDescricao = (status: string | undefined, stepName?: string): string => {
@@ -277,7 +293,7 @@ export default function Validador() {
             .then(res => res.json())
             .then(dados => {
               if (Array.isArray(dados)) {
-                setLinhasAtivas(dados);
+                setTodasLinhasImportadas(dados);
               } else {
                 console.warn('Nenhum dado encontrado para esta contabilidade.');
               }
@@ -346,7 +362,9 @@ export default function Validador() {
           status: "",
           captchaImg: "",
         }));
-        setLinhasAtivas(linhasProcessadas);
+        setTodasLinhasImportadas(linhasProcessadas);
+        // Não define linhas ativas automaticamente - usuário deve selecionar via modal
+        setLinhasAtivas([]);
       };
       reader.readAsArrayBuffer(file);
     }
@@ -636,6 +654,137 @@ export default function Validador() {
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
+    // Reseta estados do modal
+    setShowModalSelecao(false);
+    setTodasLinhasImportadas([]);
+    setModoExecucaoSelecionado('a-partir');
+    setLinhaInicial(0);
+    setLinhaFinal(0);
+    setLinhasSelecionadas([]);
+  };
+
+  // Funções para o modal de seleção
+  const abrirModalSelecao = () => {
+    if (todasLinhasImportadas.length === 0) {
+      alert('Por favor, importe uma planilha primeiro!');
+      return;
+    }
+    
+    // Inicializa os valores baseado na quantidade de linhas importadas
+    const totalLinhas = todasLinhasImportadas.length;
+    setLinhaInicial(2); // Sempre começa na linha 2 (primeira linha de dados)
+    setLinhaFinal(totalLinhas + 1); // Última linha disponível
+    setLinhasSelecionadas([]);
+    
+    // Garante que o modo seja 'a-partir' por padrão
+    setModoExecucaoSelecionado('a-partir');
+    
+    setShowModalSelecao(true);
+  };
+
+  const fecharModalSelecao = () => {
+    setShowModalSelecao(false);
+  };
+
+  const confirmarSelecao = () => {
+    let linhasParaExecutar: number[] = [];
+
+    switch (modoExecucaoSelecionado) {
+      case 'a-partir':
+        // Todas as linhas a partir da linha inicial até o final
+        if (linhaInicial < 2 || linhaInicial > todasLinhasImportadas.length + 1) {
+          alert('Linha inicial deve estar entre 2 e ' + (todasLinhasImportadas.length + 1));
+          return;
+        }
+        linhasParaExecutar = todasLinhasImportadas
+          .filter(linha => linha.linha >= linhaInicial)
+          .map(linha => linha.linha);
+        break;
+      
+      case 'intervalo':
+        // Linhas no intervalo especificado
+        if (linhaInicial < 2 || linhaFinal > todasLinhasImportadas.length + 1 || linhaInicial > linhaFinal) {
+          alert('Intervalo inválido. Linha inicial deve ser menor que linha final e estar entre 2 e ' + (todasLinhasImportadas.length + 1));
+          return;
+        }
+        linhasParaExecutar = todasLinhasImportadas
+          .filter(linha => linha.linha >= linhaInicial && linha.linha <= linhaFinal)
+          .map(linha => linha.linha);
+        break;
+      
+      case 'selecionadas':
+        // Apenas as linhas selecionadas
+        if (linhasSelecionadas.length === 0) {
+          alert('Selecione pelo menos uma linha para execução!');
+          return;
+        }
+        linhasParaExecutar = linhasSelecionadas.sort((a, b) => a - b);
+        break;
+    }
+
+    if (linhasParaExecutar.length === 0) {
+      alert('Nenhuma linha selecionada para execução!');
+      return;
+    }
+
+    // Filtra as linhas ativas baseado na seleção
+    const linhasFiltradas = todasLinhasImportadas.filter(linha => 
+      linhasParaExecutar.includes(linha.linha)
+    );
+
+    setLinhasAtivas(linhasFiltradas);
+    setShowModalSelecao(false);
+    
+    console.log(`✅ [FRONTEND] Linhas selecionadas para execução: ${linhasParaExecutar.join(', ')}`);
+    console.log(`✅ [FRONTEND] Total de linhas: ${linhasFiltradas.length}`);
+  };
+
+  const handleModoExecucaoChange = (modo: ModoExecucao) => {
+    setModoExecucaoSelecionado(modo);
+    
+    // Reset dos valores baseado no modo
+    const totalLinhas = todasLinhasImportadas.length;
+    
+    switch (modo) {
+      case 'a-partir':
+        setLinhaInicial(2);
+        setLinhaFinal(totalLinhas + 1);
+        setLinhasSelecionadas([]);
+        break;
+      case 'intervalo':
+        setLinhaInicial(2);
+        setLinhaFinal(totalLinhas + 1);
+        setLinhasSelecionadas([]);
+        break;
+      case 'selecionadas':
+        setLinhasSelecionadas([]);
+        break;
+    }
+  };
+
+  // Função para validar e ajustar valores em tempo real
+  const validarEajustarValores = (novaLinhaInicial: number, novaLinhaFinal: number) => {
+    const totalLinhas = todasLinhasImportadas.length;
+    
+    // Garante que a linha inicial esteja no range válido
+    if (novaLinhaInicial < 2) novaLinhaInicial = 2;
+    if (novaLinhaInicial > totalLinhas + 1) novaLinhaInicial = totalLinhas + 1;
+    
+    // Garante que a linha final esteja no range válido
+    if (novaLinhaFinal < novaLinhaInicial) novaLinhaFinal = novaLinhaInicial;
+    if (novaLinhaFinal > totalLinhas + 1) novaLinhaFinal = totalLinhas + 1;
+    
+    return { linhaInicial: novaLinhaInicial, linhaFinal: novaLinhaFinal };
+  };
+
+  const toggleLinhaSelecionada = (linha: number) => {
+    setLinhasSelecionadas(prev => {
+      if (prev.includes(linha)) {
+        return prev.filter(l => l !== linha);
+      } else {
+        return [...prev, linha].sort((a, b) => a - b);
+      }
+    });
   };
 
   return (
@@ -663,6 +812,11 @@ export default function Validador() {
                 <button onClick={handleImportarClick} className="automacao-btn btn-primary">
                   Importar Planilha
                 </button>
+                {todasLinhasImportadas.length > 0 && (
+                  <button onClick={abrirModalSelecao} className="automacao-btn btn-success">
+                    Selecionar Linhas
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -859,6 +1013,131 @@ export default function Validador() {
           </div>
         </div>
       </div>
+
+      {/* Modal de Seleção de Linhas */}
+      {showModalSelecao && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <h2>Selecionar Linhas para Execução</h2>
+            <div className="modal-body">
+              <div className="modal-info-header">
+                <p>Total de linhas disponíveis: <strong>{todasLinhasImportadas.length}</strong></p>
+              </div>
+              
+              <div className="modal-options">
+                <button
+                  className={`modal-option-btn ${modoExecucaoSelecionado === 'a-partir' ? 'active' : ''}`}
+                  onClick={() => handleModoExecucaoChange('a-partir')}
+                >
+                  A partir de uma linha
+                </button>
+                <button
+                  className={`modal-option-btn ${modoExecucaoSelecionado === 'intervalo' ? 'active' : ''}`}
+                  onClick={() => handleModoExecucaoChange('intervalo')}
+                >
+                  Intervalo de linhas
+                </button>
+                <button
+                  className={`modal-option-btn ${modoExecucaoSelecionado === 'selecionadas' ? 'active' : ''}`}
+                  onClick={() => handleModoExecucaoChange('selecionadas')}
+                >
+                  Linhas Selecionadas
+                </button>
+              </div>
+
+              {modoExecucaoSelecionado === 'a-partir' && (
+                <div className="modal-range-inputs">
+                  <div className="range-input-group">
+                    <label>Linha Inicial:</label>
+                    <input
+                      type="number"
+                      value={linhaInicial}
+                      onChange={(e) => {
+                        const novaInicial = Number(e.target.value);
+                        const { linhaInicial: novaInicialValida, linhaFinal: novaFinalValida } = validarEajustarValores(novaInicial, linhaFinal);
+                        setLinhaInicial(novaInicialValida);
+                        setLinhaFinal(novaFinalValida);
+                      }}
+                      min="2"
+                      max={todasLinhasImportadas.length + 1}
+                    />
+                  </div>
+                  <p className="modal-info">
+                    Serão executadas todas as linhas a partir da linha {linhaInicial} até a linha {todasLinhasImportadas.length + 1} (total: {todasLinhasImportadas.filter(l => l.linha >= linhaInicial).length} linhas)
+                  </p>
+                </div>
+              )}
+
+              {modoExecucaoSelecionado === 'intervalo' && (
+                <div className="modal-range-inputs">
+                  <div className="range-input-group">
+                    <label>Linha Inicial:</label>
+                    <input
+                      type="number"
+                      value={linhaInicial}
+                      onChange={(e) => {
+                        const novaInicial = Number(e.target.value);
+                        const { linhaInicial: novaInicialValida, linhaFinal: novaFinalValida } = validarEajustarValores(novaInicial, linhaFinal);
+                        setLinhaInicial(novaInicialValida);
+                        setLinhaFinal(novaFinalValida);
+                      }}
+                      min="2"
+                      max={linhaFinal}
+                    />
+                  </div>
+                  <div className="range-input-group">
+                    <label>Linha Final:</label>
+                    <input
+                      type="number"
+                      value={linhaFinal}
+                      onChange={(e) => {
+                        const novaFinal = Number(e.target.value);
+                        const { linhaInicial: novaInicialValida, linhaFinal: novaFinalValida } = validarEajustarValores(linhaInicial, novaFinal);
+                        setLinhaInicial(novaInicialValida);
+                        setLinhaFinal(novaFinalValida);
+                      }}
+                      min={linhaInicial}
+                      max={todasLinhasImportadas.length + 1}
+                    />
+                  </div>
+                  <p className="modal-info">
+                    Serão executadas as linhas de {linhaInicial} até {linhaFinal} (total: {todasLinhasImportadas.filter(l => l.linha >= linhaInicial && l.linha <= linhaFinal).length} linhas)
+                  </p>
+                </div>
+              )}
+
+              {modoExecucaoSelecionado === 'selecionadas' && (
+                <div className="modal-selected-lines">
+                  <h4>Selecione as linhas desejadas:</h4>
+                  <div className="cinema-grid">
+                    {todasLinhasImportadas.map(linha => (
+                      <button
+                        key={linha.linha}
+                        className={`cinema-seat ${linhasSelecionadas.includes(linha.linha) ? 'selected' : ''}`}
+                        onClick={() => toggleLinhaSelecionada(linha.linha)}
+                        type="button"
+                      >
+                        {linha.linha}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="modal-info">
+                    Linhas selecionadas: {linhasSelecionadas.length > 0 ? linhasSelecionadas.join(', ') : 'Nenhuma'} (total: {linhasSelecionadas.length} linhas)
+                  </p>
+                </div>
+              )}
+            </div>
+            <div className="modal-footer">
+              <button className="automacao-btn btn-secondary" onClick={fecharModalSelecao}>
+                Cancelar
+              </button>
+              <button className="automacao-btn btn-primary" onClick={confirmarSelecao}>
+                Confirmar Seleção
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
