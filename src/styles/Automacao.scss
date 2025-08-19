@@ -22,12 +22,12 @@
 .automacao-header {
   position: relative;
   z-index: 10;
-  background: linear-gradient(135deg, $primary-color, color.adjust($primary-color, $lightness: -10%));
-  border-radius: 0 0 30px 30px;
-  margin: 0 1rem 2rem 1rem;
+  background: linear-gradient(135deg, #0587ea 0%, #0274df 100%);
+  border-radius: 24px; 
+  margin: 1.5rem 1rem 2rem 1rem; 
   padding: 2rem;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-  color: white;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
 
   .header-content {
     display: flex;
@@ -1039,17 +1039,18 @@
 }
 
 .automacao-card {
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.10);
   max-width: 1700px;
   width: 100%;
-  padding: 4rem 2rem 2.5rem 2rem;
+  padding: 4rem 2rem 2.5rem 2rem; // mais espaço no topo, menos na base
   margin: 2rem 0;
   display: flex;
   flex-direction: column;
   min-height: 80vh;
-  border: 1px solid $border-color;
+  // Garante que o conteúdo não fique colado no topo
+  overflow: visible;
 }
 
 // Ajuste para os botões ficarem bem distribuídos
