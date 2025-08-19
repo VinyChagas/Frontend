@@ -63,9 +63,6 @@ interface CaptchaEvent {
 
 const socket = io(API_BASE_URL);
 
-// Adicione os tipos para seleção de linhas
-type ModoExecucao = 'a-partir' | 'intervalo' | 'selecionadas';
-
 export default function Validador() {
   const [empresa, setEmpresa] = useState<Empresa>({ nome: "", cnpj: "", clientes: 0 });
   const [linhasAtivas, setLinhasAtivas] = useState<Linha[]>([]);
@@ -77,14 +74,6 @@ export default function Validador() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [globalProgress, setGlobalProgress] = useState<number>(0);
   const [statusAutomacao, setStatusAutomacao] = useState<{ pausada: boolean; parada: boolean }>({ pausada: false, parada: false });
-
-  // Estados para seleção de linhas
-  const [showModalSelecao, setShowModalSelecao] = useState(false);
-  const [todasLinhasImportadas, setTodasLinhasImportadas] = useState<Linha[]>([]);
-  const [modoExecucaoSelecionado, setModoExecucaoSelecionado] = useState<ModoExecucao>('a-partir');
-  const [linhaInicial, setLinhaInicial] = useState<number>(0);
-  const [linhaFinal, setLinhaFinal] = useState<number>(0);
-  const [linhasSelecionadas, setLinhasSelecionadas] = useState<number[]>([]);
 
   // Função para traduzir status em descrições amigáveis
   const getEtapaDescricao = (status: string | undefined): string => {
@@ -323,36 +312,34 @@ useEffect(() => {
     fileInputRef.current?.click();
   }
 
-  // Ao importar planilha, armazene todas as linhas importadas
-  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const data = new Uint8Array(event.target?.result as ArrayBuffer);
-        const workbook = XLSX.read(data, { type: "array" });
-        const sheet = workbook.Sheets[workbook.SheetNames[0]];
-        const rows = XLSX.utils.sheet_to_json(sheet);
+function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+  const file = e.target.files?.[0];
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const data = new Uint8Array(event.target?.result as ArrayBuffer);
+      const workbook = XLSX.read(data, { type: "array" });
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(sheet);
 
-        const linhasProcessadas = (rows as any[]).map((row: any, index: number) => ({
-          linha: index + 2,
-          procurador: row["Procurador"]?.toUpperCase() || "",
-          presumido: row["Presumido"]?.toUpperCase() || "",
-          empresa: row["empresa"] || "",
-          CNPJ: row["CNPJ"] || "",
-          usuario: row["usuario"] || "",
-          senha: row["senha"] || "",
-          status: "",
-          captchaImg: "",
-        }));
-        setTodasLinhasImportadas(linhasProcessadas);
-        setLinhasAtivas([]); // não ativa automaticamente
-      };
-      reader.readAsArrayBuffer(file);
-    }
-    e.target.value = "";
+      // Processa localmente para exibir imediatamente
+      const linhasProcessadas = (rows as any[]).map((row: any, index: number) => ({
+        linha: index + 2,
+        procurador: row["Procurador"]?.toUpperCase() || "",
+        presumido: row["Presumido"]?.toUpperCase() || "",
+        empresa: row["empresa"] || "",
+        CNPJ: row["CNPJ"] || "",
+        usuario: row["usuario"] || "",
+        senha: row["senha"] || "",
+        status: "",
+        captchaImg: "",
+      }));
+      setLinhasAtivas(linhasProcessadas);
+    };
+    reader.readAsArrayBuffer(file);
   }
-
+  e.target.value = "";
+}
 // Função antiga de resolver captcha via REST removida (agora via socket e card manual)
 
   const executarValidacao = async () => {
@@ -680,360 +667,185 @@ function handleCaptchaInputChange(e: React.ChangeEvent<HTMLInputElement>) {
   }
 }
 
-// Função para resetar a tela
-const resetarTela = () => {
-  // Limpa todas as linhas ativas
-  setLinhasAtivas([]);
-  // Limpa linhas com erro
-  setLinhasComErro([]);
-  // Limpa respostas de captcha
-  setRespostaCaptcha({});
-  // Limpa imagem do captcha
-  setCaptchaImgBase64(null);
-  // Limpa input do captcha
-  setCaptchaInput("");
-  // Reseta linha do captcha atual
-  setLinhaCaptchaAtual(null);
-  // Reseta progresso global
-  setGlobalProgress(0);
-  // Reseta status da automação
-  setStatusAutomacao({ pausada: false, parada: false });
-  // Limpa o input de arquivo
-  if (fileInputRef.current) {
-    fileInputRef.current.value = "";
-  }
-};
-
-// Função para alterar o modo de execução no modal de seleção
-function handleModoExecucaoSelecionado(modo: ModoExecucao) {
-  setModoExecucaoSelecionado(modo);
-}
-
-// Função utilitária para validar e ajustar os valores de linhaInicial e linhaFinal
-function validarEajustarValores(linhaInicial: number, linhaFinal: number) {
-  let novaLinhaInicial = Math.max(2, linhaInicial);
-  let novaLinhaFinal = Math.max(novaLinhaInicial, linhaFinal);
-  return { linhaInicial: novaLinhaInicial, linhaFinal: novaLinhaFinal };
-}
-
-// Função para alternar seleção de linhas no modal
-function toggleLinhaSelecionada(linha: number) {
-  setLinhasSelecionadas((prevSelecionadas) =>
-    prevSelecionadas.includes(linha)
-      ? prevSelecionadas.filter((l) => l !== linha)
-      : [...prevSelecionadas, linha]
-  );
-}
-
-// Função para fechar o modal de seleção de linhas
-function fecharModalSelecao() {
-  setShowModalSelecao(false);
-}
-
-// Função para confirmar a seleção de linhas no modal
-function confirmarSelecao() {
-  let linhasSelecionadasParaAtivar: Linha[] = [];
-  if (modoExecucaoSelecionado === 'a-partir') {
-    linhasSelecionadasParaAtivar = todasLinhasImportadas.filter(l => l.linha >= linhaInicial);
-  } else if (modoExecucaoSelecionado === 'intervalo') {
-    linhasSelecionadasParaAtivar = todasLinhasImportadas.filter(l => l.linha >= linhaInicial && l.linha <= linhaFinal);
-  } else if (modoExecucaoSelecionado === 'selecionadas') {
-    linhasSelecionadasParaAtivar = todasLinhasImportadas.filter(l => linhasSelecionadas.includes(l.linha));
-  }
-  setLinhasAtivas(linhasSelecionadasParaAtivar);
-  setShowModalSelecao(false);
-}
+  // Função para resetar a tela
+  const resetarTela = () => {
+    // Limpa todas as linhas ativas
+    setLinhasAtivas([]);
+    // Limpa linhas com erro
+    setLinhasComErro([]);
+    // Limpa respostas de captcha
+    setRespostaCaptcha({});
+    // Limpa imagem do captcha
+    setCaptchaImgBase64(null);
+    // Limpa input do captcha
+    setCaptchaInput("");
+    // Reseta linha do captcha atual
+    setLinhaCaptchaAtual(null);
+    // Reseta progresso global
+    setGlobalProgress(0);
+    // Reseta status da automação
+    setStatusAutomacao({ pausada: false, parada: false });
+    // Limpa o input de arquivo
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
 
 return (
-  <div className="automacao-page-container">
-    <div className="automacao-card">
-      <div className="automacao-container">
-        <div className="automacao-header">
-          <div className="header-content">
-            <div className="header-info">
-              <h1>{empresa.nome}</h1>
-              <div className="empresa-dados">
-                <span><strong>CNPJ:</strong> {empresa.cnpj}</span>
-                <span><strong>Clientes:</strong> {empresa.clientes}</span>
-              </div>
+  <div className="validador-page-container">
+    <div className="validador-card">
+      {/* Todo o conteúdo da tela */}
+      <div className="validador-container">
+        <div className="validador-top-row">
+          <div className="validador-header-info">
+            <h1 className="validador-titulo">{empresa.nome}</h1>
+            <div className="validador-empresa-dados">
+              <span><strong>CNPJ:</strong> {empresa.cnpj}</span>
+              <span><strong>Clientes:</strong> {empresa.clientes}</span>
             </div>
-            <div className="header-actions">
-              <input
-                id="input-planilha"
-                type="file"
-                accept=".xlsx,.xls,.csv"
-                style={{ display: "none" }}
-                ref={fileInputRef}
-                onChange={handleFileChange}
-              />
-              <button onClick={handleImportarClick} className="automacao-btn btn-primary">
-                Importar Planilha
-              </button>
-              {todasLinhasImportadas.length > 0 && (
-                <button onClick={() => setShowModalSelecao(true)} className="automacao-btn btn-success">
-                  Selecionar Linhas
-                </button>
-              )}
-            </div>
+          </div>
+          <div>
+            <input
+              id="input-planilha"
+              type="file"
+              accept=".xlsx,.xls,.csv"
+              style={{ display: "none" }}
+              ref={fileInputRef}
+              onChange={handleFileChange}
+            />
+            <button onClick={handleImportarClick} className="validador-importar-btn">
+              Importar Planilha
+            </button>
           </div>
         </div>
 
-        <div className="automacao-actions-bar">
-          <div className="actions-grid">
-            {/* Grid 1: Captcha */}
+        <div className="validador-actions-bar">
+          <div className="validador-actions-left">
+            {/* Removido label e selects de modo, resolução e navegadores */}
+            {/* Exibe o card de captcha somente se modoLogin for 'manual' */}
             {modoLogin === 'manual' && (
-              <div className="action-group">
-                <div className="group-title">Captcha</div>
-                <div className="automacao-captcha-card">
-                  <div className="captcha-header">
-                    <div className="captcha-icon">🔐</div>
-                    <span className="captcha-label">Captcha:</span>
-                  </div>
-                  <div className="captcha-content">
-                    <div className="captcha-image-area">
-                      {captchaImgBase64 ? (
-                        <img src={`data:image/png;base64,${captchaImgBase64}`} alt="captcha" />
-                      ) : (
-                        <span className="placeholder"></span>
-                      )}
-                    </div>
-                    <input
-                      className="captcha-input"
-                      type="text"
-                      maxLength={5}
-                      pattern="[0-9]*"
-                      inputMode="numeric"
-                      value={captchaInput}
-                      onChange={handleCaptchaInputChange}
-                      placeholder="00000"
-                    />
-                  </div>
+              <div className="validador-captcha-card">
+                <span className="validador-captcha-label">Captcha:</span>
+                <div className="validador-captcha-img-area">
+                  {captchaImgBase64 ? (
+                    <img src={`data:image/png;base64,${captchaImgBase64}`} alt="captcha" />
+                  ) : (
+                    <span style={{ color: "#2563eb", opacity: 0.7, fontWeight: 600, fontSize: 13 }}></span>
+                  )}
                 </div>
+                <input
+                  className="validador-captcha-input"
+                  type="text"
+                  maxLength={5}
+                  pattern="[0-9]*"
+                  inputMode="numeric"
+                  value={captchaInput}
+                  onChange={handleCaptchaInputChange}
+                  placeholder="00000"
+                />
               </div>
             )}
-            {/* Grid 2: Progresso */}
-            <div className="action-group">
-              <div className="group-title">Progresso</div>
-              <div className="automacao-global-progress">
-                <div className="progress-header">
-                  <h3>Progresso Global</h3>
-                  <div className="progress-percentage">{globalProgress}%</div>
-                </div>
-                <div className="progress-track">
+          </div>
+          <div className="validador-actions-center">
+              {/* Progresso global */}
+              <div className="validador-global-progress">
+                <div className="validador-progress-track">
                   <div
-                    className={`progress-bar ${globalProgress >= 100 ? 'sucesso' : globalProgress === 0 ? 'carregando' : 'carregando'}`}
+                    className={`validador-progress-bar ${globalProgress >= 100 ? 'sucesso' : globalProgress === 0 ? 'carregando' : 'carregando'}`}
                     style={{ width: `${Math.max(0, Math.min(100, globalProgress))}%` }}
                   />
                 </div>
+                <span className="validador-progress-label">{globalProgress}%</span>
               </div>
-            </div>
-            {/* Grid 3: Ações */}
-            <div className="action-group">
-              <div className="group-title">Ações</div>
-              <div className="control-buttons">
-                <button
-                  className="automacao-btn btn-primary"
-                  type="button"
-                  onClick={executarValidacao}
-                  disabled={linhasAtivas.length === 0}
-                >
-                  {linhasAtivas.length === 0 ? 'Sem Linhas' : 'Executar'}
-                </button>
-                <button className="automacao-btn btn-success" type="button" onClick={salvarNoBackend}>
-                  Salvar
-                </button>
-                <button
-                  className="automacao-btn btn-success"
-                  type="button"
-                >
-                  Exportar PDF
-                </button>
-              </div>
-            </div>
-            {/* Grid 4: Controles */}
-            <div className="action-group">
-              <div className="group-title">Controles</div>
-              <div className="control-buttons">
-                <button
-                  className="automacao-btn btn-danger"
-                  type="button"
-                  onClick={async () => {
-                    try {
-                      const res = await fetch(`${API_BASE_URL}/api/parar-automacao`, { method: "POST" });
-                      const resultado = await res.json();
-                      if (resultado.sucesso) {
-                        alert("⏹️ Automação parada com sucesso!");
-                        setStatusAutomacao(prev => ({ ...prev, parada: true }));
-                      } else {
-                        alert("❌ Erro ao parar automação: " + (resultado.erro || 'Erro desconhecido'));
-                      }
-                    } catch (error) {
-                      alert("❌ Erro ao parar automação: " + (error instanceof Error ? error.message : 'Erro desconhecido'));
-                    }
-                  }}
-                  disabled={statusAutomacao.parada}
-                >
-                  {statusAutomacao.parada ? 'Automação Parada' : 'Parar Automação'}
-                </button>
-                <button
-                  className="automacao-btn btn-secondary"
-                  type="button"
-                  onClick={async () => {
-                    try {
-                      const res = await fetch(`${API_BASE_URL}/api/resetar-controles`, { method: "POST" });
-                      const resultado = await res.json();
-                      if (resultado.sucesso) {
-                        alert("🔄 Controles resetados com sucesso!");
-                        resetarTela();
-                      } else {
-                        alert("❌ Erro ao resetar controles: " + (resultado.erro || 'Erro desconhecido'));
-                      }
-                    } catch (error) {
-                      alert("❌ Erro ao resetar controles: " + (error instanceof Error ? error.message : 'Erro desconhecido'));
-                    }
-                  }}
-                >
-                  Resetar Controles
-                </button>
-              </div>
-            </div>
+              
+              <button 
+                className="validador-btn-executar" 
+                type="button" 
+                onClick={executarValidacao}
+                disabled={linhasAtivas.length === 0}
+              >
+                {linhasAtivas.length === 0 ? 'Sem Linhas' : 'Executar'}
+              </button>
+            <button className="validador-btn-executar" type="button" onClick={salvarNoBackend}>
+              Salvar
+            </button>
+          </div>
+          <div className="validador-actions-right">
+
+            <button
+              className="validador-btn-exportar"
+              type="button"
+            >
+              Exportar PDF
+            </button>
+            
+            <button
+              className="validador-btn-executar"
+              type="button"
+              style={{ marginTop: 12 }}
+              onClick={async () => {
+                try {
+                  console.log('🛑 [FRONTEND] Parando automação...');
+                  const res = await fetch(`${API_BASE_URL}/api/parar-automacao`, { 
+                    method: "POST" 
+                  });
+                  const resultado = await res.json();
+                  
+                  if (resultado.sucesso) {
+                    alert("⏹️ Automação parada com sucesso!");
+                    console.log('✅ [FRONTEND] Automação parada:', resultado.mensagem);
+                    // Atualiza o status imediatamente
+                    setStatusAutomacao(prev => ({ ...prev, parada: true }));
+                  } else {
+                    alert("❌ Erro ao parar automação: " + (resultado.erro || 'Erro desconhecido'));
+                  }
+                } catch (error) {
+                  console.error('❌ [FRONTEND] Erro ao parar automação:', error);
+                  alert("❌ Erro ao parar automação: " + (error instanceof Error ? error.message : 'Erro desconhecido'));
+                }
+              }}
+              disabled={statusAutomacao.parada}
+            >
+              {statusAutomacao.parada ? 'Automação Parada' : 'Parar Automação'}
+            </button>
+
+            <button
+              className="validador-btn-executar"
+              type="button"
+              style={{ marginTop: 8 }}
+              onClick={async () => {
+                try {
+                  console.log('🔄 [FRONTEND] Resetando controles...');
+                  const res = await fetch(`${API_BASE_URL}/api/resetar-controles`, { 
+                    method: "POST" 
+                  });
+                  const resultado = await res.json();
+                  
+                  if (resultado.sucesso) {
+                    alert("🔄 Controles resetados com sucesso!");
+                    console.log('✅ [FRONTEND] Controles resetados:', resultado.mensagem);
+                    // Reseta a tela após resetar os controles no backend
+                    resetarTela();
+                  } else {
+                    alert("❌ Erro ao resetar controles: " + (resultado.erro || 'Erro desconhecido'));
+                  }
+                } catch (error) {
+                  console.error('❌ [FRONTEND] Erro ao resetar controles:', error);
+                  alert("❌ Erro ao resetar controles: " + (error instanceof Error ? error.message : 'Erro desconhecido'));
+                }
+              }}
+            >
+              Resetar Controles
+            </button>
           </div>
         </div>
 
-        <div className="automacao-tabela-container">
-          <div className="tabela-dupla">
-            <div className="tabela-wrapper">
-              <div className="tabela-titulo">Linhas Ativas</div>
-              {renderTabela(linhasAtivas)}
-            </div>
-            <div className="tabela-wrapper">
-              <div className="tabela-titulo">Linhas com Erro</div>
-              {renderTabelaErros(linhasComErro)}
-            </div>
-          </div>
+        <div className="validador-tabela-dupla">
+          <div>{renderTabela(linhasAtivas)}</div>
+          <div>{renderTabelaErros(linhasComErro)}</div>
         </div>
       </div>
     </div>
-    {/* Modal de Seleção de Linhas */}
-    {showModalSelecao && (
-      <div className="modal-overlay">
-        <div className="modal-content">
-          <h2>Selecionar Linhas para Execução</h2>
-          <div className="modal-body">
-            <div className="modal-info-header">
-              <p>Total de linhas disponíveis: <strong>{todasLinhasImportadas.length}</strong></p>
-            </div>
-            <div className="modal-options">
-              <button
-                className={`modal-option-btn ${modoExecucaoSelecionado === 'a-partir' ? 'active' : ''}`}
-                onClick={() => handleModoExecucaoSelecionado('a-partir')}
-              >
-                A partir de uma linha
-              </button>
-              <button
-                className={`modal-option-btn ${modoExecucaoSelecionado === 'intervalo' ? 'active' : ''}`}
-                onClick={() => handleModoExecucaoSelecionado('intervalo')}
-              >
-                Intervalo de linhas
-              </button>
-              <button
-                className={`modal-option-btn ${modoExecucaoSelecionado === 'selecionadas' ? 'active' : ''}`}
-                onClick={() => handleModoExecucaoSelecionado('selecionadas')}
-              >
-                Linhas Selecionadas
-              </button>
-            </div>
-            {modoExecucaoSelecionado === 'a-partir' && (
-              <div className="modal-range-inputs">
-                <div className="range-input-group">
-                  <label>Linha Inicial:</label>
-                  <input
-                    type="number"
-                    value={linhaInicial}
-                    onChange={(e) => {
-                      const novaInicial = Number(e.target.value);
-                      const { linhaInicial: novaLinhaInicial, linhaFinal: novaLinhaFinal } = validarEajustarValores(novaInicial, linhaFinal);
-                      setLinhaInicial(novaLinhaInicial);
-                      setLinhaFinal(novaLinhaFinal);
-                    }}
-                    min="2"
-                    max={todasLinhasImportadas.length + 1}
-                  />
-                </div>
-                <p className="modal-info">
-                  Serão executadas todas as linhas a partir da linha {linhaInicial} até a linha {todasLinhasImportadas.length + 1} (total: {todasLinhasImportadas.filter(l => l.linha >= linhaInicial).length} linhas)
-                </p>
-              </div>
-            )}
-            {modoExecucaoSelecionado === 'intervalo' && (
-              <div className="modal-range-inputs">
-                <div className="range-input-group">
-                  <label>Linha Inicial:</label>
-                  <input
-                    type="number"
-                    value={linhaInicial}
-                    onChange={(e) => {
-                      const novaInicial = Number(e.target.value);
-                      const { linhaInicial: novaLinhaInicial, linhaFinal: novaLinhaFinal } = validarEajustarValores(novaInicial, linhaFinal);
-                      setLinhaInicial(novaLinhaInicial);
-                      setLinhaFinal(novaLinhaFinal);
-                    }}
-                    min="2"
-                    max={linhaFinal}
-                  />
-                </div>
-                <div className="range-input-group">
-                  <label>Linha Final:</label>
-                  <input
-                    type="number"
-                    value={linhaFinal}
-                    onChange={(e) => {
-                      const novaFinal = Number(e.target.value);
-                      const { linhaInicial: novaLinhaInicial, linhaFinal: novaLinhaFinal } = validarEajustarValores(linhaInicial, novaFinal);
-                      setLinhaInicial(novaLinhaInicial);
-                      setLinhaFinal(novaLinhaFinal);
-                    }}
-                    min={linhaInicial}
-                    max={todasLinhasImportadas.length + 1}
-                  />
-                </div>
-                <p className="modal-info">
-                  Serão executadas as linhas de {linhaInicial} até {linhaFinal} (total: {todasLinhasImportadas.filter(l => l.linha >= linhaInicial && l.linha <= linhaFinal).length} linhas)
-                </p>
-              </div>
-            )}
-            {modoExecucaoSelecionado === 'selecionadas' && (
-              <div className="modal-selected-lines">
-                <h4>Selecione as linhas desejadas:</h4>
-                <div className="cinema-grid">
-                  {todasLinhasImportadas.map(linha => (
-                    <button
-                      key={linha.linha}
-                      className={`cinema-seat ${linhasSelecionadas.includes(linha.linha) ? 'selected' : ''}`}
-                      onClick={() => toggleLinhaSelecionada(linha.linha)}
-                      type="button"
-                    >
-                      {linha.linha}
-                    </button>
-                  ))}
-                </div>
-                <p className="modal-info">
-                  Linhas selecionadas: {linhasSelecionadas.length > 0 ? linhasSelecionadas.join(', ') : 'Nenhuma'} (total: {linhasSelecionadas.length} linhas)
-                </p>
-              </div>
-            )}
-          </div>
-          <div className="modal-footer">
-            <button className="automacao-btn btn-secondary" onClick={fecharModalSelecao}>
-              Cancelar
-            </button>
-            <button className="automacao-btn btn-primary" onClick={confirmarSelecao}>
-              Confirmar Seleção
-            </button>
-          </div>
-        </div>
-      </div>
-    )}
   </div>
-  );
+);
 }
