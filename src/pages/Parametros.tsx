@@ -6,23 +6,19 @@ import "../styles/Parametros.scss";
 interface ParametrosValidacao {
   modoExecucao: 'manual' | 'automatico';
   numeroNavegadores: number;
-  delayEntreExecucoes: number;
   timeoutCaptcha: number;
   tentativasMaximas: number;
-  pausaEntreEtapas: boolean;
-  tempoPausa: number;
+  modoDepuracao: boolean;
+  tipoMonitor: 'FHD' | 'QHD';
 }
 
 interface ParametrosAutomacao {
   modoExecucao: 'manual' | 'automatico';
   numeroNavegadores: number;
-  delayEntreExecucoes: number;
   timeoutCaptcha: number;
   tentativasMaximas: number;
-  pausaEntreEtapas: boolean;
-  tempoPausa: number;
-  processarEmLote: boolean;
-  tamanhoLote: number;
+  modoDepuracao: boolean;
+  tipoMonitor: 'FHD' | 'QHD';
   retryEmCasoDeErro: boolean;
   maximoRetries: number;
 }
@@ -37,22 +33,18 @@ export default function Parametros() {
       validacao: {
         modoExecucao: 'manual',
         numeroNavegadores: 1,
-        delayEntreExecucoes: 2000,
         timeoutCaptcha: 30000,
         tentativasMaximas: 3,
-        pausaEntreEtapas: false,
-        tempoPausa: 1000
+        modoDepuracao: false,
+        tipoMonitor: 'FHD'
       },
       automacao: {
         modoExecucao: 'automatico',
         numeroNavegadores: 2,
-        delayEntreExecucoes: 1500,
         timeoutCaptcha: 30000,
         tentativasMaximas: 3,
-        pausaEntreEtapas: true,
-        tempoPausa: 2000,
-        processarEmLote: true,
-        tamanhoLote: 10,
+        modoDepuracao: false,
+        tipoMonitor: 'FHD',
         retryEmCasoDeErro: true,
         maximoRetries: 2
       }
@@ -73,10 +65,17 @@ export default function Parametros() {
   // Carregar configurações salvas do localStorage
   useEffect(() => {
     const configsSalvas = localStorage.getItem('configuracoesSistema');
+    const ativaSalva = localStorage.getItem('configuracaoAtiva');
     if (configsSalvas) {
       try {
         const configs = JSON.parse(configsSalvas);
         setConfiguracoes(configs);
+        if (ativaSalva && configs[ativaSalva]) {
+          setConfiguracaoAtiva(ativaSalva);
+          setParametrosValidacao(configs[ativaSalva].validacao);
+          setParametrosAutomacao(configs[ativaSalva].automacao);
+          return;
+        }
         if (configs[configuracaoAtiva]) {
           setParametrosValidacao(configs[configuracaoAtiva].validacao);
           setParametrosAutomacao(configs[configuracaoAtiva].automacao);
@@ -86,6 +85,16 @@ export default function Parametros() {
       }
     }
   }, []);
+
+  // Sincroniza parâmetros quando a configuração ativa muda e persiste no localStorage
+  useEffect(() => {
+    const cfg = configuracoes[configuracaoAtiva];
+    if (cfg) {
+      setParametrosValidacao(cfg.validacao);
+      setParametrosAutomacao(cfg.automacao);
+    }
+    localStorage.setItem('configuracaoAtiva', configuracaoAtiva);
+  }, [configuracaoAtiva, configuracoes]);
 
   // Salvar configurações no localStorage
   const salvarConfiguracao = () => {
@@ -126,25 +135,7 @@ export default function Parametros() {
     setMostrarPreview(true);
   };
 
-  // Aplicar configuração
-  const aplicarConfiguracao = () => {
-    // Aqui você pode implementar a lógica para aplicar a configuração
-    // Por exemplo, enviar para o backend ou atualizar o estado global
-    console.log('Aplicando configuração:', {
-      validacao: parametrosValidacao,
-      automacao: parametrosAutomacao
-    });
-    
-    // Simular aplicação
-    const toast = document.createElement('div');
-    toast.className = 'toast-info';
-    toast.textContent = 'Configuração aplicada com sucesso!';
-    document.body.appendChild(toast);
-    
-    setTimeout(() => {
-      document.body.removeChild(toast);
-    }, 3000);
-  };
+  
 
   // Resetar para valores padrão
   const resetarParaPadrao = () => {
@@ -254,21 +245,6 @@ export default function Parametros() {
               </div>
 
               <div className="form-group">
-                <label htmlFor="delayValidacao">Delay entre Execuções (ms):</label>
-                <input
-                  id="delayValidacao"
-                  type="number"
-                  min="0"
-                  step="100"
-                  value={parametrosValidacao.delayEntreExecucoes}
-                  onChange={(e) => setParametrosValidacao({
-                    ...parametrosValidacao,
-                    delayEntreExecucoes: parseInt(e.target.value)
-                  })}
-                />
-              </div>
-
-              <div className="form-group">
                 <label htmlFor="timeoutValidacao">Timeout Captcha (ms):</label>
                 <input
                   id="timeoutValidacao"
@@ -302,30 +278,34 @@ export default function Parametros() {
                 <label className="checkbox-option">
                   <input
                     type="checkbox"
-                    checked={parametrosValidacao.pausaEntreEtapas}
+                    checked={parametrosValidacao.modoDepuracao}
                     onChange={(e) => setParametrosValidacao({
                       ...parametrosValidacao,
-                      pausaEntreEtapas: e.target.checked
+                      modoDepuracao: e.target.checked
                     })}
                   />
-                  <span>Pausa entre Etapas</span>
+                  <span>Modo de Depuração</span>
                 </label>
+                <small className="form-help">
+                  Quando ativado, os navegadores serão exibidos visualmente para monitoramento. 
+                  Quando desativado, executam em modo headless (sem interface gráfica).
+                </small>
               </div>
 
-              {parametrosValidacao.pausaEntreEtapas && (
+              {parametrosValidacao.modoDepuracao && (
                 <div className="form-group">
-                  <label htmlFor="tempoPausaValidacao">Tempo de Pausa (ms):</label>
-                  <input
-                    id="tempoPausaValidacao"
-                    type="number"
-                    min="100"
-                    step="100"
-                    value={parametrosValidacao.tempoPausa}
+                  <label htmlFor="tipoMonitorValidacao">Tipo de Monitor:</label>
+                  <select
+                    id="tipoMonitorValidacao"
+                    value={parametrosValidacao.tipoMonitor}
                     onChange={(e) => setParametrosValidacao({
                       ...parametrosValidacao,
-                      tempoPausa: parseInt(e.target.value)
+                      tipoMonitor: e.target.value as 'FHD' | 'QHD'
                     })}
-                  />
+                  >
+                    <option value="FHD">FHD (1920x1080)</option>
+                    <option value="QHD">QHD (2560x1440)</option>
+                  </select>
                 </div>
               )}
             </div>
@@ -387,21 +367,6 @@ export default function Parametros() {
               </div>
 
               <div className="form-group">
-                <label htmlFor="delayAutomacao">Delay entre Execuções (ms):</label>
-                <input
-                  id="delayAutomacao"
-                  type="number"
-                  min="0"
-                  step="100"
-                  value={parametrosAutomacao.delayEntreExecucoes}
-                  onChange={(e) => setParametrosAutomacao({
-                    ...parametrosAutomacao,
-                    delayEntreExecucoes: parseInt(e.target.value)
-                  })}
-                />
-              </div>
-
-              <div className="form-group">
                 <label htmlFor="timeoutAutomacao">Timeout Captcha (ms):</label>
                 <input
                   id="timeoutAutomacao"
@@ -435,61 +400,34 @@ export default function Parametros() {
                 <label className="checkbox-option">
                   <input
                     type="checkbox"
-                    checked={parametrosAutomacao.pausaEntreEtapas}
+                    checked={parametrosAutomacao.modoDepuracao}
                     onChange={(e) => setParametrosAutomacao({
                       ...parametrosAutomacao,
-                      pausaEntreEtapas: e.target.checked
+                      modoDepuracao: e.target.checked
                     })}
                   />
-                  <span>Pausa entre Etapas</span>
+                  <span>Modo de Depuração</span>
                 </label>
+                <small className="form-help">
+                  Quando ativado, os navegadores serão exibidos visualmente para monitoramento. 
+                  Quando desativado, executam em modo headless (sem interface gráfica).
+                </small>
               </div>
 
-              {parametrosAutomacao.pausaEntreEtapas && (
+              {parametrosAutomacao.modoDepuracao && (
                 <div className="form-group">
-                  <label htmlFor="tempoPausaAutomacao">Tempo de Pausa (ms):</label>
-                  <input
-                    id="tempoPausaAutomacao"
-                    type="number"
-                    min="100"
-                    step="100"
-                    value={parametrosAutomacao.tempoPausa}
+                  <label htmlFor="tipoMonitorAutomacao">Tipo de Monitor:</label>
+                  <select
+                    id="tipoMonitorAutomacao"
+                    value={parametrosAutomacao.tipoMonitor}
                     onChange={(e) => setParametrosAutomacao({
                       ...parametrosAutomacao,
-                      tempoPausa: parseInt(e.target.value)
+                      tipoMonitor: e.target.value as 'FHD' | 'QHD'
                     })}
-                  />
-                </div>
-              )}
-
-              <div className="form-group checkbox-group">
-                <label className="checkbox-option">
-                  <input
-                    type="checkbox"
-                    checked={parametrosAutomacao.processarEmLote}
-                    onChange={(e) => setParametrosAutomacao({
-                      ...parametrosAutomacao,
-                      processarEmLote: e.target.checked
-                    })}
-                  />
-                  <span>Processar em Lote</span>
-                </label>
-              </div>
-
-              {parametrosAutomacao.processarEmLote && (
-                <div className="form-group">
-                  <label htmlFor="tamanhoLote">Tamanho do Lote:</label>
-                  <input
-                    id="tamanhoLote"
-                    type="number"
-                    min="1"
-                    max="100"
-                    value={parametrosAutomacao.tamanhoLote}
-                    onChange={(e) => setParametrosAutomacao({
-                      ...parametrosAutomacao,
-                      tamanhoLote: parseInt(e.target.value)
-                    })}
-                  />
+                  >
+                    <option value="FHD">FHD (1920x1080)</option>
+                    <option value="QHD">QHD (2560x1440)</option>
+                  </select>
                 </div>
               )}
 
@@ -537,13 +475,7 @@ export default function Parametros() {
             Preview do Payload
           </button>
           
-          <button 
-            className="btn btn-success"
-            onClick={aplicarConfiguracao}
-          >
-            <PlayIcon size={16} />
-            Aplicar Configuração
-          </button>
+          
         </div>
 
         {/* Preview do Payload */}

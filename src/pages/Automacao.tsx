@@ -406,7 +406,8 @@ export default function Validador() {
         linhas: linhasParaExecutar,
         qtdNavegadores: 8,
         modoResolucao: resolucao,
-        modoLogin: modoLogin
+        modoLogin: modoLogin,
+        modoDepuracao
       });
 
       const res = await fetch(`${API_BASE_URL}/executar`, {
@@ -419,7 +420,8 @@ export default function Validador() {
           linhas: linhasParaExecutar,
           qtdNavegadores: 8,
           modoResolucao: resolucao,
-          modoLogin: modoLogin
+          modoLogin: modoLogin,
+          modoDepuracao
         }),
       });
 
@@ -616,8 +618,31 @@ export default function Validador() {
   }
 
   // Variáveis de estado para controles da automação
-  const [modoLogin] = useState<'automatico' | 'manual'>('manual');
-  const [resolucao] = useState<'FHD' | 'QHD'>('FHD');
+  function carregarParametrosAutomacao() {
+    try {
+      const ativa = localStorage.getItem('configuracaoAtiva') || 'padrao';
+      const raw = localStorage.getItem('configuracoesSistema');
+      if (!raw) return { modoExecucao: 'manual', tipoMonitor: 'FHD', modoDepuracao: false } as const;
+      const cfgs = JSON.parse(raw);
+      const autom = cfgs?.[ativa]?.automacao || cfgs?.padrao?.automacao;
+      if (!autom) return { modoExecucao: 'manual', tipoMonitor: 'FHD', modoDepuracao: false } as const;
+      return autom as { modoExecucao: 'manual' | 'automatico'; tipoMonitor: 'FHD' | 'QHD'; modoDepuracao: boolean };
+    } catch {
+      return { modoExecucao: 'manual', tipoMonitor: 'FHD', modoDepuracao: false } as const;
+    }
+  }
+
+  const inicial = carregarParametrosAutomacao();
+  const [modoLogin, setModoLogin] = useState<'automatico' | 'manual'>(inicial.modoExecucao);
+  const [resolucao, setResolucao] = useState<'FHD' | 'QHD'>(inicial.tipoMonitor);
+  const [modoDepuracao, setModoDepuracao] = useState<boolean>(inicial.modoDepuracao);
+
+  useEffect(() => {
+    const atual = carregarParametrosAutomacao();
+    setModoLogin(atual.modoExecucao);
+    setResolucao(atual.tipoMonitor);
+    setModoDepuracao(atual.modoDepuracao);
+  }, []);
 
   const captchaTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -823,10 +848,10 @@ export default function Validador() {
 
           <div className="automacao-actions-bar">
             <div className="actions-grid">
-              <div className="action-group">
-                <div className="group-title">Captcha</div>
-                {/* Exibe o card de captcha somente se modoLogin for 'manual' */}
-                {modoLogin === 'manual' && (
+              {modoLogin === 'manual' && (
+                <div className="action-group">
+                  <div className="group-title">Captcha</div>
+                  {/* Exibe o card de captcha somente se modoLogin for 'manual' */}
                   <div className="automacao-captcha-card">
                     <div className="captcha-header">
                       <div className="captcha-icon">🔐</div>
@@ -852,8 +877,8 @@ export default function Validador() {
                       />
                     </div>
                   </div>
-                )}
-              </div>
+                </div>
+              )}
 
               <div className="action-group">
                 <div className="group-title">Progresso</div>

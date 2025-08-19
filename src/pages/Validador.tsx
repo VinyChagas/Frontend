@@ -368,10 +368,22 @@ function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
 
     console.log('🚀 [FRONTEND] Parâmetros:', {
       contabilidade: empresa.nome,
-      modoLogin,
+      modoLogin: modoLogin === 'automatico' ? 'Automático' : 'Manual',
       modoResolucao: resolucao,
+      modoDepuracao,
       qtdNavegadores: 'SEMPRE 8 (fixo no backend)'
     });
+
+    // Captura configurações completas da tela de Parâmetros
+    const ativaKey = localStorage.getItem('configuracaoAtiva') || 'padrao';
+    let configuracoesSelecionadas: any = null;
+    try {
+      const rawCfg = localStorage.getItem('configuracoesSistema');
+      if (rawCfg) {
+        const allCfg = JSON.parse(rawCfg);
+        configuracoesSelecionadas = allCfg?.[ativaKey] || allCfg?.padrao || null;
+      }
+    } catch {}
 
     const res = await fetch(`${API_BASE_URL}/executar-validacao`, {
       method: "POST",
@@ -380,10 +392,13 @@ function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
       },
       body: JSON.stringify({
         contabilidade: empresa.nome,
-        modoLogin,
+        modoLogin: modoLogin === 'automatico' ? 'Automático' : 'Manual',
         modoResolucao: resolucao,
+        modoDepuracao,
         // qtdNavegadores é ignorado pelo backend (sempre 8)
-        linhas: linhasAtivas.map(l => l.linha) // Envia linhas específicas se houver
+        linhas: linhasAtivas.map(l => l.linha), // Envia linhas específicas se houver
+        configuracaoAtiva: ativaKey,
+        configuracoes: configuracoesSelecionadas
       }),
     });
 
@@ -613,8 +628,31 @@ function renderTabelaErros(linhas: Linha[]) {
 }
 
 // ListaStatusEmpresas removido pois não é utilizado
-const [modoLogin] = useState<'automatico' | 'manual'>('manual');
-const [resolucao] = useState<'FHD' | 'QHD'>('FHD');
+function carregarParametrosValidacao() {
+  try {
+    const ativa = localStorage.getItem('configuracaoAtiva') || 'padrao';
+    const raw = localStorage.getItem('configuracoesSistema');
+    if (!raw) return { modoExecucao: 'manual', tipoMonitor: 'FHD', modoDepuracao: false } as const;
+    const cfgs = JSON.parse(raw);
+    const valid = cfgs?.[ativa]?.validacao || cfgs?.padrao?.validacao;
+    if (!valid) return { modoExecucao: 'manual', tipoMonitor: 'FHD', modoDepuracao: false } as const;
+    return valid as { modoExecucao: 'manual' | 'automatico'; tipoMonitor: 'FHD' | 'QHD'; modoDepuracao: boolean };
+  } catch {
+    return { modoExecucao: 'manual', tipoMonitor: 'FHD', modoDepuracao: false } as const;
+  }
+}
+
+const inicial = carregarParametrosValidacao();
+const [modoLogin, setModoLogin] = useState<'automatico' | 'manual'>(inicial.modoExecucao);
+const [resolucao, setResolucao] = useState<'FHD' | 'QHD'>(inicial.tipoMonitor);
+const [modoDepuracao, setModoDepuracao] = useState<boolean>(inicial.modoDepuracao);
+
+useEffect(() => {
+  const atual = carregarParametrosValidacao();
+  setModoLogin(atual.modoExecucao);
+  setResolucao(atual.tipoMonitor);
+  setModoDepuracao(atual.modoDepuracao);
+}, []);
 
 const captchaTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
