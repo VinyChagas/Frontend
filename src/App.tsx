@@ -10,6 +10,7 @@ import Contabilidades from "./pages/Contabilidades";
 import ContabilidadeForm from "./pages/ContabilidadeForm";
 import Automacao from "./pages/Automacao";
 import Parametros from "./pages/Parametros";
+import { EmpresaProvider } from "./contexts/EmpresaContext";
 
 function AnimatedRoutes() {
   const location = useLocation();
@@ -27,6 +28,7 @@ function AnimatedRoutes() {
           <Route path="contabilidades/novo" element={<ContabilidadeForm />} />
           <Route path="contabilidades/:id" element={<ContabilidadeForm />} />
           <Route path="automacao" element={<Automacao />} />
+          <Route path="automacao/:empresaId" element={<Automacao />} />
           <Route path="parametros" element={<Parametros />} />
         </Route>
       </Routes>
@@ -36,8 +38,10 @@ function AnimatedRoutes() {
 
 export default function App() {
   return (
-    <Router>
-      <AnimatedRoutes />
-    </Router>
+    <EmpresaProvider>
+      <Router>
+        <AnimatedRoutes />
+      </Router>
+    </EmpresaProvider>
   );
 }

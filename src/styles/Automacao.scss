@@ -46,6 +46,17 @@
     flex: 1;
     min-width: 300px;
 
+    .header-top {
+      margin-bottom: 1rem;
+      
+      .voltar-btn {
+        &:hover {
+          background: rgba(255, 255, 255, 0.1) !important;
+          color: white !important;
+        }
+      }
+    }
+
     h1 {
       font-size: 2.5rem;
       font-weight: 800;

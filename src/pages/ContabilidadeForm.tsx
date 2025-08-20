@@ -4,19 +4,10 @@ import { Eye, UploadSimple, CheckCircle } from "@phosphor-icons/react";
 import "../styles/Contabilidades.scss";
 import "../styles/ContabilidadeForm.scss"; // novo SCSS para detalhes visuais
 import axios from "axios";
+import { type Empresa } from "../contexts/EmpresaContext";
 
-// Tipo da empresa
-type EmpresaForm = {
-  id?: number;
-  nome: string;
-  cnpj: string;
-  endereco: string;
-  telefone: string;
-  email: string;
-  login: string;
-  senha: string;
-  clientes: number;
-};
+// Tipo da empresa para o formulário (sem id obrigatório para criação)
+type EmpresaForm = Omit<Empresa, 'id'> & { id?: number };
 
 export default function ContabilidadeForm() {
   const navigate = useNavigate();

@@ -2,14 +2,7 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import "../styles/Contabilidades.scss";
-
-type Empresa = {
-  id: number;
-  nome: string;
-  cnpj: string;
-  clientes: number;
-  logoUrl?: string;
-};
+import { type Empresa } from "../contexts/EmpresaContext";
 
 // Função utilitária para formatar CNPJ na listagem
 function formatCNPJ(cnpj: string) {

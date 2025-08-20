@@ -3,16 +3,15 @@ import React, { useEffect, useState, useRef } from "react";
 import { io } from "socket.io-client";
 import * as XLSX from "xlsx";
 import { useConfiguracaoAutomacao } from "../hooks/useConfiguracaoAutomacao";
+import { useEmpresa } from "../contexts/EmpresaContext";
+import { useNavigate, useParams } from "react-router-dom";
+import axios from "axios";
+import EmpresaSelector from "../components/EmpresaSelector";
 
 // Base da API (permite sobrescrever via Vite env)
 const API_BASE_URL: string = (import.meta as any)?.env?.VITE_API_URL || "http://localhost:4000";
 
 // Tipos de dados compatíveis com o backend main.mjs
-interface Empresa {
-  nome: string;
-  cnpj: string;
-  clientes: number;
-}
 
 interface Linha {
   linha: number;
@@ -65,20 +64,18 @@ interface CaptchaEvent {
 // Tipos para o modal de seleção
 type ModoExecucao = 'a-partir' | 'intervalo' | 'selecionadas';
 
-interface ModalSelecaoProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onConfirm: (modo: ModoExecucao, linhas: number[]) => void;
-  totalLinhas: number;
-}
+
 
 const socket = io(API_BASE_URL);
 
-export default function Validador() {
+export default function Automacao() {
+  const navigate = useNavigate();
+  const { empresaId } = useParams();
+  const { empresaSelecionada, selecionarEmpresa } = useEmpresa();
+  
   // Hook para configurações de automação
   const { criarPayloadExecucao, obterConfiguracaoAtiva } = useConfiguracaoAutomacao();
   
-  const [empresa, setEmpresa] = useState<Empresa>({ nome: "", cnpj: "", clientes: 0 });
   const [linhasAtivas, setLinhasAtivas] = useState<Linha[]>([]);
   const [linhasComErro, setLinhasComErro] = useState<Linha[]>([]);
   const [respostaCaptcha, setRespostaCaptcha] = useState<Record<number,string>>({});
@@ -283,56 +280,60 @@ export default function Validador() {
     setGlobalProgress(Math.round(avg));
   }, [linhasAtivas]);
 
+  // Verifica se há uma empresa selecionada ou se precisa carregar pelo ID da URL
   useEffect(() => {
-    fetch(`${API_BASE_URL}/api/empresas`)
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.length > 0) {
-          setEmpresa(data[0]);
-
-          // Carrega JSON da contabilidade
-          const nomeContabilidade = data[0].nome;
-          const nomeArquivoSeguro = nomeContabilidade.replace(/[^\w\d]/g, '_');
-          fetch(`${API_BASE_URL}/api/validacoes/${encodeURIComponent(nomeArquivoSeguro)}`)
-            .then(res => res.json())
-            .then(dados => {
-              if (Array.isArray(dados)) {
-                setTodasLinhasImportadas(dados);
-              } else {
-                console.warn('Nenhum dado encontrado para esta contabilidade.');
-              }
-            })
-            .catch(err => console.error('Erro ao carregar JSON da contabilidade:', err));
-        }
-      });
-  }, []);
-
-  useEffect(() => {
-    async function carregarValidacoes() {
+    const carregarEmpresaPorId = async (id: string) => {
       try {
-        const nomeTratado = empresa.nome.replace(/[^\w\d]/g, '_');
-        const res = await fetch(`${API_BASE_URL}/empresas/validacoes/${nomeTratado}`);
-        if (!res.ok) {
-          console.warn('Nenhum dado de validação encontrado.');
-          return;
+        const response = await axios.get(`${API_BASE_URL}/api/empresas/${id}`);
+        if (response.data) {
+          selecionarEmpresa(response.data);
+        } else {
+          navigate("/home");
         }
-
-        const validacoesSalvas = await res.json();
-        setLinhasAtivas((prev) =>
-          prev.map((linha) => {
-            const validada = (validacoesSalvas as Linha[]).find((v: Linha) => v.linha === linha.linha);
-            return validada ? { ...linha, status: validada.status || linha.status } : linha;
-          })
-        );
-      } catch (err) {
-        console.error('Erro ao carregar validações:', err);
+      } catch (error) {
+        console.error('Erro ao carregar empresa:', error);
+        navigate("/home");
       }
+    };
+
+    if (!empresaSelecionada && empresaId) {
+      // Se não há empresa selecionada mas há ID na URL, carrega a empresa
+      carregarEmpresaPorId(empresaId);
+      return;
     }
 
-    if (empresa?.nome) {
-      carregarValidacoes();
+    if (!empresaSelecionada) {
+      // Se não há empresa selecionada e nem ID na URL, redireciona para Home
+      navigate("/home");
+      return;
     }
-  }, [empresa]);
+
+    // Carrega dados da empresa selecionada
+    const carregarDadosEmpresa = async () => {
+      try {
+        const nomeArquivoSeguro = empresaSelecionada.nome.replace(/[^\w\d]/g, '_');
+        const response = await fetch(`${API_BASE_URL}/api/validacoes/${encodeURIComponent(nomeArquivoSeguro)}`);
+        
+        if (response.ok) {
+          const dados = await response.json();
+          if (Array.isArray(dados)) {
+            setTodasLinhasImportadas(dados);
+          } else {
+            console.warn('Nenhum dado encontrado para esta contabilidade.');
+            setTodasLinhasImportadas([]);
+          }
+        } else {
+          console.warn('Nenhum dado encontrado para esta contabilidade.');
+          setTodasLinhasImportadas([]);
+        }
+      } catch (error) {
+        console.error('Erro ao carregar dados da empresa:', error);
+        setTodasLinhasImportadas([]);
+      }
+    };
+
+    carregarDadosEmpresa();
+  }, [empresaSelecionada, empresaId, navigate, selecionarEmpresa]);
 
   function handleImportarClick() {
     // Usa ref para evitar query por id
@@ -412,8 +413,8 @@ export default function Validador() {
         linhaInicial,
         linhaFinal,
         linhasSelecionadas,
-        empresa.nome,
-        empresa.cnpj
+        empresaSelecionada?.nome || "",
+        empresaSelecionada?.cnpj || ""
       );
 
       // Obter configuração ativa para usar os parâmetros
@@ -472,7 +473,7 @@ export default function Validador() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          contabilidade: empresa.nome,
+          contabilidade: empresaSelecionada?.nome,
           dados: linhasAtivas,
         }),
       });
@@ -657,14 +658,10 @@ export default function Validador() {
 
   const inicial = carregarParametrosAutomacao();
   const [modoLogin, setModoLogin] = useState<'automatico' | 'manual'>(inicial.modoExecucao);
-  const [resolucao, setResolucao] = useState<'FHD' | 'QHD'>(inicial.tipoMonitor);
-  const [modoDepuracao, setModoDepuracao] = useState<boolean>(inicial.modoDepuracao);
 
   useEffect(() => {
     const atual = carregarParametrosAutomacao();
     setModoLogin(atual.modoExecucao);
-    setResolucao(atual.tipoMonitor);
-    setModoDepuracao(atual.modoDepuracao);
   }, []);
 
   const captchaTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -842,10 +839,31 @@ export default function Validador() {
           <div className="automacao-header">
             <div className="header-content">
               <div className="header-info">
-                <h1>{empresa.nome}</h1>
+                <div className="header-top">
+                  <button 
+                    onClick={() => navigate("/home")} 
+                    className="voltar-btn"
+                    style={{
+                      background: "none",
+                      border: "none",
+                      color: "#6b7280",
+                      cursor: "pointer",
+                      fontSize: "0.9rem",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.5rem",
+                      padding: "0.5rem",
+                      borderRadius: "6px",
+                      transition: "all 0.2s"
+                    }}
+                  >
+                    ← Voltar para Home
+                  </button>
+                </div>
+                <h1>{empresaSelecionada?.nome}</h1>
                 <div className="empresa-dados">
-                  <span><strong>CNPJ:</strong> {empresa.cnpj}</span>
-                  <span><strong>Clientes:</strong> {empresa.clientes}</span>
+                  <span><strong>CNPJ:</strong> {empresaSelecionada?.cnpj}</span>
+                  <span><strong>Clientes:</strong> {empresaSelecionada?.clientes}</span>
                 </div>
               </div>
               <div className="header-actions">
@@ -1186,6 +1204,9 @@ export default function Validador() {
           </div>
         </div>
       )}
+      
+      {/* Componente para mostrar e trocar de empresa */}
+      <EmpresaSelector />
     </div>
   );
 }

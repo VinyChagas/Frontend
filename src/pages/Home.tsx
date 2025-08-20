@@ -2,17 +2,12 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "../styles/Home.scss";
 import axios from "axios";
-
-// Tipo da empresa
-type Empresa = {
-  id: number;
-  nome: string;
-  clientes: number;
-};
+import { useEmpresa, type Empresa } from "../contexts/EmpresaContext";
 
 export default function Home() {
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const navigate = useNavigate();
+  const { selecionarEmpresa } = useEmpresa();
 
   useEffect(() => {
     axios
@@ -21,13 +16,20 @@ export default function Home() {
       .catch(() => setEmpresas([]));
   }, []);
 
+  const handleCardClick = (empresa: Empresa) => {
+    // Seleciona a empresa no contexto global
+    selecionarEmpresa(empresa);
+    // Navega para a página de automação com o ID da empresa
+    navigate(`/automacao/${empresa.id}`);
+  };
+
   return (
     <div className="home-cards-container">
       {empresas.map((empresa) => (
         <button
           className="home-card"
           key={empresa.id}
-          onClick={() => navigate("/automacao")}
+          onClick={() => handleCardClick(empresa)}
         >
           <div className="home-card-header">
             <div className="home-card-logo home-card-logo--initials">
