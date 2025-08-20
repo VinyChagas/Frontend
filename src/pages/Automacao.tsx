@@ -4,7 +4,7 @@ import { io } from "socket.io-client";
 import * as XLSX from "xlsx";
 import { useConfiguracaoAutomacao } from "../hooks/useConfiguracaoAutomacao";
 import { useEmpresa } from "../contexts/EmpresaContext";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import EmpresaSelector from "../components/EmpresaSelector";
 
@@ -70,7 +70,6 @@ const socket = io(API_BASE_URL);
 
 export default function Automacao() {
   const navigate = useNavigate();
-  const { empresaId } = useParams();
   const { empresaSelecionada, selecionarEmpresa } = useEmpresa();
   
   // Hook para configurações de automação
@@ -280,31 +279,14 @@ export default function Automacao() {
     setGlobalProgress(Math.round(avg));
   }, [linhasAtivas]);
 
-  // Verifica se há uma empresa selecionada ou se precisa carregar pelo ID da URL
+  // Verifica se há uma empresa selecionada e carrega os dados
   useEffect(() => {
-    const carregarEmpresaPorId = async (id: string) => {
-      try {
-        const response = await axios.get(`${API_BASE_URL}/api/empresas/${id}`);
-        if (response.data) {
-          selecionarEmpresa(response.data);
-        } else {
-          navigate("/home");
-        }
-      } catch (error) {
-        console.error('Erro ao carregar empresa:', error);
-        navigate("/home");
-      }
-    };
-
-    if (!empresaSelecionada && empresaId) {
-      // Se não há empresa selecionada mas há ID na URL, carrega a empresa
-      carregarEmpresaPorId(empresaId);
-      return;
-    }
-
     if (!empresaSelecionada) {
-      // Se não há empresa selecionada e nem ID na URL, redireciona para Home
-      navigate("/home");
+      // Se não há empresa selecionada, apenas limpa os dados mas não redireciona
+      console.log('ℹ️ Nenhuma empresa selecionada. Use o dropdown para selecionar uma empresa.');
+      setTodasLinhasImportadas([]);
+      setLinhasAtivas([]);
+      setLinhasComErro([]);
       return;
     }
 
@@ -318,22 +300,29 @@ export default function Automacao() {
           const dados = await response.json();
           if (Array.isArray(dados)) {
             setTodasLinhasImportadas(dados);
+            // Carrega também as linhas ativas se existirem
+            if (dados.length > 0) {
+              setLinhasAtivas(dados.filter(linha => linha.status && !linha.status.toLowerCase().includes('erro')));
+            }
           } else {
             console.warn('Nenhum dado encontrado para esta contabilidade.');
             setTodasLinhasImportadas([]);
+            setLinhasAtivas([]);
           }
         } else {
           console.warn('Nenhum dado encontrado para esta contabilidade.');
           setTodasLinhasImportadas([]);
+          setLinhasAtivas([]);
         }
       } catch (error) {
         console.error('Erro ao carregar dados da empresa:', error);
         setTodasLinhasImportadas([]);
+        setLinhasAtivas([]);
       }
     };
 
     carregarDadosEmpresa();
-  }, [empresaSelecionada, empresaId, navigate, selecionarEmpresa]);
+  }, [empresaSelecionada]);
 
   function handleImportarClick() {
     // Usa ref para evitar query por id
@@ -344,7 +333,7 @@ export default function Automacao() {
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
-      reader.onload = (event) => {
+      reader.onload = async (event) => {
         const data = new Uint8Array(event.target?.result as ArrayBuffer);
         const workbook = XLSX.read(data, { type: "array" });
         const sheet = workbook.Sheets[workbook.SheetNames[0]];
@@ -367,9 +356,37 @@ export default function Automacao() {
           status: "",
           captchaImg: "",
         }));
+        
         setTodasLinhasImportadas(linhasProcessadas);
         // Não define linhas ativas automaticamente - usuário deve selecionar via modal
         setLinhasAtivas([]);
+
+        // Salva automaticamente os dados da planilha vinculados à empresa
+        if (empresaSelecionada) {
+          try {
+            const res = await fetch(`${API_BASE_URL}/api/salvar-planilha`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                contabilidade: empresaSelecionada.nome,
+                dados: linhasProcessadas,
+                nomeArquivoOriginal: file.name,
+              }),
+            });
+
+            const resultado = await res.json();
+            if (resultado.sucesso) {
+              console.log('✅ Planilha salva automaticamente para a empresa:', empresaSelecionada.nome);
+              console.log(`📊 Total de linhas salvas: ${resultado.totalLinhas}`);
+            } else {
+              console.warn('⚠️ Erro ao salvar planilha automaticamente:', resultado.erro);
+            }
+          } catch (error) {
+            console.error('❌ Erro ao salvar planilha automaticamente:', error);
+          }
+        }
       };
       reader.readAsArrayBuffer(file);
     }
@@ -378,6 +395,16 @@ export default function Automacao() {
 
   // Função para executar validação compatível com o backend main.mjs
   const executarValidacao = async () => {
+    if (!empresaSelecionada) {
+      alert('❌ Selecione uma empresa primeiro!');
+      return;
+    }
+
+    if (linhasAtivas.length === 0) {
+      alert('❌ Importe uma planilha e selecione linhas para execução!');
+      return;
+    }
+
     try {
       console.log('🚀 [FRONTEND] Iniciando validação...');
       
@@ -466,6 +493,11 @@ export default function Automacao() {
   };
 
   const salvarNoBackend = async () => {
+    if (!empresaSelecionada) {
+      alert('❌ Selecione uma empresa primeiro!');
+      return;
+    }
+
     try {
       const res = await fetch(`${API_BASE_URL}/api/salvar-json`, {
         method: 'POST',
@@ -473,7 +505,7 @@ export default function Automacao() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          contabilidade: empresaSelecionada?.nome,
+          contabilidade: empresaSelecionada.nome,
           dados: linhasAtivas,
         }),
       });
@@ -708,6 +740,23 @@ export default function Automacao() {
     setLinhasSelecionadas([]);
   };
 
+  // Função para limpar dados da empresa atual (sem resetar controles)
+  const limparDadosEmpresa = () => {
+    setLinhasAtivas([]);
+    setLinhasComErro([]);
+    setTodasLinhasImportadas([]);
+    setRespostaCaptcha({});
+    setCaptchaImgBase64(null);
+    setCaptchaInput("");
+    setLinhaCaptchaAtual(null);
+    setGlobalProgress(0);
+    setShowModalSelecao(false);
+    setModoExecucaoSelecionado('a-partir');
+    setLinhaInicial(0);
+    setLinhaFinal(0);
+    setLinhasSelecionadas([]);
+  };
+
   // Funções para o modal de seleção
   const abrirModalSelecao = () => {
     if (todasLinhasImportadas.length === 0) {
@@ -860,11 +909,35 @@ export default function Automacao() {
                     ← Voltar para Home
                   </button>
                 </div>
-                <h1>{empresaSelecionada?.nome}</h1>
-                <div className="empresa-dados">
-                  <span><strong>CNPJ:</strong> {empresaSelecionada?.cnpj}</span>
-                  <span><strong>Clientes:</strong> {empresaSelecionada?.clientes}</span>
+                
+                {/* Seletor de Empresa */}
+                <div className="empresa-selector-container">
+                  <h2>Selecionar Contabilidade</h2>
+                  <EmpresaSelector />
+                  {!empresaSelecionada && (
+                    <p className="empresa-selector-hint">
+                      Escolha uma contabilidade para importar planilhas e executar validações
+                    </p>
+                  )}
                 </div>
+
+                {/* Informações da empresa selecionada */}
+                {empresaSelecionada ? (
+                  <>
+                    <h1>{empresaSelecionada.nome}</h1>
+                    <div className="empresa-dados">
+                      <span><strong>CNPJ:</strong> {empresaSelecionada.cnpj}</span>
+                      <span><strong>Clientes:</strong> {empresaSelecionada.clientes}</span>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <h1>Automação</h1>
+                    <div className="empresa-dados">
+                      <span>Selecione uma contabilidade para começar</span>
+                    </div>
+                  </>
+                )}
               </div>
               <div className="header-actions">
                 <input
@@ -875,12 +948,21 @@ export default function Automacao() {
                   ref={fileInputRef}
                   onChange={handleFileChange}
                 />
-                <button onClick={handleImportarClick} className="automacao-btn btn-primary">
+                <button 
+                  onClick={handleImportarClick} 
+                  className="automacao-btn btn-primary"
+                  disabled={!empresaSelecionada}
+                >
                   Importar Planilha
                 </button>
                 {todasLinhasImportadas.length > 0 && (
                   <button onClick={abrirModalSelecao} className="automacao-btn btn-success">
                     Selecionar Linhas
+                  </button>
+                )}
+                {todasLinhasImportadas.length > 0 && (
+                  <button onClick={limparDadosEmpresa} className="automacao-btn btn-secondary">
+                    Limpar Dados
                   </button>
                 )}
               </div>
@@ -944,11 +1026,16 @@ export default function Automacao() {
                     className="automacao-btn btn-primary" 
                     type="button" 
                     onClick={executarValidacao}
-                    disabled={linhasAtivas.length === 0}
+                    disabled={!empresaSelecionada || linhasAtivas.length === 0}
                   >
-                    {linhasAtivas.length === 0 ? 'Sem Linhas' : 'Executar'}
+                    {!empresaSelecionada ? 'Selecione Empresa' : linhasAtivas.length === 0 ? 'Sem Linhas' : 'Executar'}
                   </button>
-                  <button className="automacao-btn btn-success" type="button" onClick={salvarNoBackend}>
+                  <button 
+                    className="automacao-btn btn-success" 
+                    type="button" 
+                    onClick={salvarNoBackend}
+                    disabled={!empresaSelecionada || linhasAtivas.length === 0}
+                  >
                     Salvar
                   </button>
                   <button
@@ -1205,8 +1292,6 @@ export default function Automacao() {
         </div>
       )}
       
-      {/* Componente para mostrar e trocar de empresa */}
-      <EmpresaSelector />
     </div>
   );
 }
