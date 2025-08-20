@@ -139,15 +139,12 @@ export default function Automacao() {
   // Captura o captcha enviado pelo backend via socket e exibe para o usuário
   useEffect(() => {
     function handleCaptcha(data: CaptchaEvent) {
-      // Se for o mesmo captcha (mesma linha), só atualiza a imagem e limpa o input
+      // Adiciona o captcha à fila de exibição (ordem de chegada)
       setCaptchaImgBase64(data.imagem);
       setCaptchaInput("");
-      setLinhaCaptchaAtual((linhaAtual) => {
-        // Se for um novo captcha para a mesma linha, mantém a linha
-        if (linhaAtual === data.linha) return linhaAtual;
-        // Se for para outra linha, atualiza
-        return data.linha;
-      });
+      setLinhaCaptchaAtual(data.linha);
+      
+      console.log(`🔐 [FRONTEND] Captcha recebido para linha ${data.linha} - Adicionado à fila de exibição`);
     }
     socket.on("captcha", handleCaptcha);
     return () => {
@@ -159,11 +156,19 @@ export default function Automacao() {
   function enviarCaptchaParaBackend(valor?: string) {
     const resposta = valor !== undefined ? valor : captchaInput;
     if (resposta && resposta.length === 5 && linhaCaptchaAtual != null) {
+      console.log(`📤 [FRONTEND] Enviando captcha para linha ${linhaCaptchaAtual}: ${resposta}`);
+      
       socket.emit("captcha-resposta", {
         linha: linhaCaptchaAtual,
         resposta
       });
-      // Não limpa o estado aqui! Só limpa quando o backend retornar sucesso para a linha
+      
+      // Limpa o estado após enviar
+      setCaptchaImgBase64(null);
+      setCaptchaInput("");
+      setLinhaCaptchaAtual(null);
+      
+      console.log(`✅ [FRONTEND] Captcha enviado e estado limpo para linha ${linhaCaptchaAtual}`);
     }
   }
 
