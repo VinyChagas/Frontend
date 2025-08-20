@@ -12,39 +12,37 @@ export default function Parametros() {
     salvarConfiguracao,
     adicionarConfiguracao,
     removerConfiguracao,
-    criarPayloadExecucao
+    criarPayloadExecucao,
+    atualizarParametros
   } = useConfiguracaoAutomacao();
 
-  const [parametrosValidacao, setParametrosValidacao] = useState<ParametrosValidacao>(
-    obterConfiguracaoAtiva()?.validacao || {
-      modoExecucao: 'manual',
-      numeroNavegadores: 1,
-      timeoutCaptcha: 30000,
-      tentativasMaximas: 3,
-      modoDepuracao: false,
-      tipoMonitor: 'FHD'
-    }
-  );
+  // Estados locais para os parâmetros
+  const [parametrosValidacao, setParametrosValidacao] = useState<ParametrosValidacao>({
+    modoExecucao: 'manual',
+    numeroNavegadores: 1,
+    timeoutCaptcha: 30000,
+    tentativasMaximas: 3,
+    modoDepuracao: false,
+    tipoMonitor: 'FHD'
+  });
 
-  const [parametrosAutomacao, setParametrosAutomacao] = useState<ParametrosAutomacao>(
-    obterConfiguracaoAtiva()?.automacao || {
-      modoExecucao: 'automatico',
-      numeroNavegadores: 2,
-      timeoutCaptcha: 30000,
-      tentativasMaximas: 3,
-      modoDepuracao: false,
-      tipoMonitor: 'FHD',
-      retryEmCasoDeErro: true,
-      maximoRetries: 2
-    }
-  );
+  const [parametrosAutomacao, setParametrosAutomacao] = useState<ParametrosAutomacao>({
+    modoExecucao: 'automatico',
+    numeroNavegadores: 2,
+    timeoutCaptcha: 30000,
+    tentativasMaximas: 3,
+    modoDepuracao: false,
+    tipoMonitor: 'FHD',
+    retryEmCasoDeErro: true,
+    maximoRetries: 2
+  });
 
   const [mostrarPreview, setMostrarPreview] = useState(false);
   const [payloadPreview, setPayloadPreview] = useState<string>('');
   const [novaConfiguracao, setNovaConfiguracao] = useState<string>('');
   const [mostrarFormNovaConfig, setMostrarFormNovaConfig] = useState(false);
 
-  // Sincroniza parâmetros quando a configuração ativa muda
+  // Carregar configuração ativa quando ela mudar
   useEffect(() => {
     const configAtiva = obterConfiguracaoAtiva();
     if (configAtiva) {
@@ -64,7 +62,9 @@ export default function Parametros() {
     document.body.appendChild(toast);
     
     setTimeout(() => {
-      document.body.removeChild(toast);
+      if (document.body.contains(toast)) {
+        document.body.removeChild(toast);
+      }
     }, 3000);
   };
 
@@ -92,7 +92,9 @@ export default function Parametros() {
     document.body.appendChild(toast);
     
     setTimeout(() => {
-      document.body.removeChild(toast);
+      if (document.body.contains(toast)) {
+        document.body.removeChild(toast);
+      }
     }, 3000);
   };
 
@@ -119,6 +121,30 @@ export default function Parametros() {
       setParametrosValidacao(configPadrao.validacao);
       setParametrosAutomacao(configPadrao.automacao);
     }
+  };
+
+  // Função para atualizar parâmetros de validação
+  const atualizarParametrosValidacao = (campo: keyof ParametrosValidacao, valor: any) => {
+    // Atualiza o estado local
+    setParametrosValidacao(prev => ({
+      ...prev,
+      [campo]: valor
+    }));
+    
+    // Atualiza também no hook para sincronização
+    atualizarParametros('validacao', campo, valor);
+  };
+
+  // Função para atualizar parâmetros de automação
+  const atualizarParametrosAutomacao = (campo: keyof ParametrosAutomacao, valor: any) => {
+    // Atualiza o estado local
+    setParametrosAutomacao(prev => ({
+      ...prev,
+      [campo]: valor
+    }));
+    
+    // Atualiza também no hook para sincronização
+    atualizarParametros('automacao', campo, valor);
   };
 
   return (
@@ -234,10 +260,7 @@ export default function Parametros() {
                       name="modoValidacao"
                       value="manual"
                       checked={parametrosValidacao.modoExecucao === 'manual'}
-                      onChange={(e) => setParametrosValidacao({
-                        ...parametrosValidacao,
-                        modoExecucao: e.target.value as 'manual' | 'automatico'
-                      })}
+                      onChange={(e) => atualizarParametrosValidacao('modoExecucao', e.target.value as 'manual' | 'automatico')}
                     />
                     <span>Manual</span>
                   </label>
@@ -247,10 +270,7 @@ export default function Parametros() {
                       name="modoValidacao"
                       value="automatico"
                       checked={parametrosValidacao.modoExecucao === 'automatico'}
-                      onChange={(e) => setParametrosValidacao({
-                        ...parametrosValidacao,
-                        modoExecucao: e.target.value as 'manual' | 'automatico'
-                      })}
+                      onChange={(e) => atualizarParametrosValidacao('modoExecucao', e.target.value as 'manual' | 'automatico')}
                     />
                     <span>Automático</span>
                   </label>
@@ -265,10 +285,7 @@ export default function Parametros() {
                   min="1"
                   max="10"
                   value={parametrosValidacao.numeroNavegadores}
-                  onChange={(e) => setParametrosValidacao({
-                    ...parametrosValidacao,
-                    numeroNavegadores: parseInt(e.target.value)
-                  })}
+                  onChange={(e) => atualizarParametrosValidacao('numeroNavegadores', parseInt(e.target.value))}
                 />
               </div>
 
@@ -280,10 +297,7 @@ export default function Parametros() {
                   min="5000"
                   step="1000"
                   value={parametrosValidacao.timeoutCaptcha}
-                  onChange={(e) => setParametrosValidacao({
-                    ...parametrosValidacao,
-                    timeoutCaptcha: parseInt(e.target.value)
-                  })}
+                  onChange={(e) => atualizarParametrosValidacao('timeoutCaptcha', parseInt(e.target.value))}
                 />
               </div>
 
@@ -295,10 +309,7 @@ export default function Parametros() {
                   min="1"
                   max="10"
                   value={parametrosValidacao.tentativasMaximas}
-                  onChange={(e) => setParametrosValidacao({
-                    ...parametrosValidacao,
-                    tentativasMaximas: parseInt(e.target.value)
-                  })}
+                  onChange={(e) => atualizarParametrosValidacao('tentativasMaximas', parseInt(e.target.value))}
                 />
               </div>
 
@@ -307,10 +318,7 @@ export default function Parametros() {
                   <input
                     type="checkbox"
                     checked={parametrosValidacao.modoDepuracao}
-                    onChange={(e) => setParametrosValidacao({
-                      ...parametrosValidacao,
-                      modoDepuracao: e.target.checked
-                    })}
+                    onChange={(e) => atualizarParametrosValidacao('modoDepuracao', e.target.checked)}
                   />
                   <span>Modo de Depuração</span>
                 </label>
@@ -326,10 +334,7 @@ export default function Parametros() {
                   <select
                     id="tipoMonitorValidacao"
                     value={parametrosValidacao.tipoMonitor}
-                    onChange={(e) => setParametrosValidacao({
-                      ...parametrosValidacao,
-                      tipoMonitor: e.target.value as 'FHD' | 'QHD'
-                    })}
+                    onChange={(e) => atualizarParametrosValidacao('tipoMonitor', e.target.value as 'FHD' | 'QHD')}
                   >
                     <option value="FHD">FHD (1920x1080)</option>
                     <option value="QHD">QHD (2560x1440)</option>
@@ -356,10 +361,7 @@ export default function Parametros() {
                       name="modoAutomacao"
                       value="manual"
                       checked={parametrosAutomacao.modoExecucao === 'manual'}
-                      onChange={(e) => setParametrosAutomacao({
-                        ...parametrosAutomacao,
-                        modoExecucao: e.target.value as 'manual' | 'automatico'
-                      })}
+                      onChange={(e) => atualizarParametrosAutomacao('modoExecucao', e.target.value as 'manual' | 'automatico')}
                     />
                     <span>Manual</span>
                   </label>
@@ -369,10 +371,7 @@ export default function Parametros() {
                       name="modoAutomacao"
                       value="automatico"
                       checked={parametrosAutomacao.modoExecucao === 'automatico'}
-                      onChange={(e) => setParametrosAutomacao({
-                        ...parametrosAutomacao,
-                        modoExecucao: e.target.value as 'manual' | 'automatico'
-                      })}
+                      onChange={(e) => atualizarParametrosAutomacao('modoExecucao', e.target.value as 'manual' | 'automatico')}
                     />
                     <span>Automático</span>
                   </label>
@@ -387,10 +386,7 @@ export default function Parametros() {
                   min="1"
                   max="10"
                   value={parametrosAutomacao.numeroNavegadores}
-                  onChange={(e) => setParametrosAutomacao({
-                    ...parametrosAutomacao,
-                    numeroNavegadores: parseInt(e.target.value)
-                  })}
+                  onChange={(e) => atualizarParametrosAutomacao('numeroNavegadores', parseInt(e.target.value))}
                 />
               </div>
 
@@ -402,10 +398,7 @@ export default function Parametros() {
                   min="5000"
                   step="1000"
                   value={parametrosAutomacao.timeoutCaptcha}
-                  onChange={(e) => setParametrosAutomacao({
-                    ...parametrosAutomacao,
-                    timeoutCaptcha: parseInt(e.target.value)
-                  })}
+                  onChange={(e) => atualizarParametrosAutomacao('timeoutCaptcha', parseInt(e.target.value))}
                 />
               </div>
 
@@ -417,10 +410,7 @@ export default function Parametros() {
                   min="1"
                   max="10"
                   value={parametrosAutomacao.tentativasMaximas}
-                  onChange={(e) => setParametrosAutomacao({
-                    ...parametrosAutomacao,
-                    tentativasMaximas: parseInt(e.target.value)
-                  })}
+                  onChange={(e) => atualizarParametrosAutomacao('tentativasMaximas', parseInt(e.target.value))}
                 />
               </div>
 
@@ -429,10 +419,7 @@ export default function Parametros() {
                   <input
                     type="checkbox"
                     checked={parametrosAutomacao.modoDepuracao}
-                    onChange={(e) => setParametrosAutomacao({
-                      ...parametrosAutomacao,
-                      modoDepuracao: e.target.checked
-                    })}
+                    onChange={(e) => atualizarParametrosAutomacao('modoDepuracao', e.target.checked)}
                   />
                   <span>Modo de Depuração</span>
                 </label>
@@ -448,10 +435,7 @@ export default function Parametros() {
                   <select
                     id="tipoMonitorAutomacao"
                     value={parametrosAutomacao.tipoMonitor}
-                    onChange={(e) => setParametrosAutomacao({
-                      ...parametrosAutomacao,
-                      tipoMonitor: e.target.value as 'FHD' | 'QHD'
-                    })}
+                    onChange={(e) => atualizarParametrosAutomacao('tipoMonitor', e.target.value as 'FHD' | 'QHD')}
                   >
                     <option value="FHD">FHD (1920x1080)</option>
                     <option value="QHD">QHD (2560x1440)</option>
@@ -464,10 +448,7 @@ export default function Parametros() {
                   <input
                     type="checkbox"
                     checked={parametrosAutomacao.retryEmCasoDeErro}
-                    onChange={(e) => setParametrosAutomacao({
-                      ...parametrosAutomacao,
-                      retryEmCasoDeErro: e.target.checked
-                    })}
+                    onChange={(e) => atualizarParametrosAutomacao('retryEmCasoDeErro', e.target.checked)}
                   />
                   <span>Retry em Caso de Erro</span>
                 </label>
@@ -482,10 +463,7 @@ export default function Parametros() {
                     min="1"
                     max="5"
                     value={parametrosAutomacao.maximoRetries}
-                    onChange={(e) => setParametrosAutomacao({
-                      ...parametrosAutomacao,
-                      maximoRetries: parseInt(e.target.value)
-                    })}
+                    onChange={(e) => atualizarParametrosAutomacao('maximoRetries', parseInt(e.target.value))}
                   />
                 </div>
               )}

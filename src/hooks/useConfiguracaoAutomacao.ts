@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 // Tipos para os parâmetros de configuração
 export interface ParametrosValidacao {
@@ -99,7 +99,7 @@ export function useConfiguracaoAutomacao() {
   }, [configuracaoAtiva]);
 
   // Salvar configurações no localStorage
-  const salvarConfiguracao = (validacao: ParametrosValidacao, automacao: ParametrosAutomacao) => {
+  const salvarConfiguracao = useCallback((validacao: ParametrosValidacao, automacao: ParametrosAutomacao) => {
     const novaConfig = {
       ...configuracoes,
       [configuracaoAtiva]: {
@@ -112,10 +112,10 @@ export function useConfiguracaoAutomacao() {
     
     setConfiguracoes(novaConfig);
     localStorage.setItem('configuracoesSistema', JSON.stringify(novaConfig));
-  };
+  }, [configuracaoAtiva, configuracoes]);
 
   // Criar payload completo para execução
-  const criarPayloadExecucao = (
+  const criarPayloadExecucao = useCallback((
     modoExecucao: 'a-partir' | 'intervalo' | 'selecionadas',
     linhas: number[],
     linhaInicial?: number,
@@ -142,13 +142,16 @@ export function useConfiguracaoAutomacao() {
       empresa: empresa || '',
       cnpj: cnpj || ''
     };
-  };
+  }, [configuracoes, configuracaoAtiva]);
 
   // Obter configuração ativa
-  const obterConfiguracaoAtiva = () => configuracoes[configuracaoAtiva];
+  const obterConfiguracaoAtiva = useCallback(() => {
+    const config = configuracoes[configuracaoAtiva];
+    return config;
+  }, [configuracoes, configuracaoAtiva]);
 
   // Adicionar nova configuração
-  const adicionarConfiguracao = (nome: string, validacao: ParametrosValidacao, automacao: ParametrosAutomacao) => {
+  const adicionarConfiguracao = useCallback((nome: string, validacao: ParametrosValidacao, automacao: ParametrosAutomacao) => {
     const novaConfig = {
       ...configuracoes,
       [nome]: {
@@ -161,10 +164,10 @@ export function useConfiguracaoAutomacao() {
     
     setConfiguracoes(novaConfig);
     localStorage.setItem('configuracoesSistema', JSON.stringify(novaConfig));
-  };
+  }, [configuracoes]);
 
   // Remover configuração
-  const removerConfiguracao = (nome: string) => {
+  const removerConfiguracao = useCallback((nome: string) => {
     if (nome === 'padrao') return; // Não permite remover a configuração padrão
     
     const novasConfigs = { ...configuracoes };
@@ -177,7 +180,32 @@ export function useConfiguracaoAutomacao() {
     if (configuracaoAtiva === nome) {
       setConfiguracaoAtiva('padrao');
     }
-  };
+  }, [configuracoes, configuracaoAtiva]);
+
+  // Função para atualizar parâmetros específicos
+  const atualizarParametros = useCallback((
+    tipo: 'validacao' | 'automacao',
+    campo: string,
+    valor: any
+  ) => {
+    const configAtual = configuracoes[configuracaoAtiva];
+    if (!configAtual) return;
+
+    const novaConfig = {
+      ...configuracoes,
+      [configuracaoAtiva]: {
+        ...configAtual,
+        [tipo]: {
+          ...configAtual[tipo],
+          [campo]: valor
+        },
+        ultimaModificacao: new Date().toISOString()
+      }
+    };
+
+    setConfiguracoes(novaConfig);
+    localStorage.setItem('configuracoesSistema', JSON.stringify(novaConfig));
+  }, [configuracoes, configuracaoAtiva]);
 
   return {
     configuracaoAtiva,
@@ -187,6 +215,7 @@ export function useConfiguracaoAutomacao() {
     salvarConfiguracao,
     adicionarConfiguracao,
     removerConfiguracao,
-    criarPayloadExecucao
+    criarPayloadExecucao,
+    atualizarParametros
   };
 }
