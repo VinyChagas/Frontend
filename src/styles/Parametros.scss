@@ -90,6 +90,9 @@
     background: white;
     border-radius: 12px;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    display: flex;
+    align-items: center;
+    gap: 1rem;
 
     label {
       display: block;
@@ -99,19 +102,110 @@
     }
 
     select {
-      width: 100%;
-      max-width: 300px;
       padding: 0.75rem;
-      border: 2px solid $border-color;
+      border: 1px solid $border-color;
       border-radius: 8px;
       font-size: 1rem;
       background: white;
+      min-width: 200px;
       cursor: pointer;
-      transition: border-color 0.3s ease;
 
       &:focus {
         outline: none;
         border-color: $primary-color;
+        box-shadow: 0 0 0 3px rgba($primary-color, 0.1);
+      }
+    }
+
+    .btn-danger {
+      padding: 0.5rem 0.75rem;
+      border: none;
+      border-radius: 6px;
+      background: $danger-color;
+      color: white;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+
+      &:hover {
+        background: color.adjust($danger-color, $lightness: -10%);
+        transform: translateY(-1px);
+      }
+
+      &.btn-small {
+        font-size: 0.875rem;
+        padding: 0.375rem 0.625rem;
+      }
+    }
+  }
+
+  .nova-config-form {
+    margin-bottom: 2rem;
+    padding: 1.5rem;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    border: 2px dashed $border-color;
+
+    .form-group {
+      margin-bottom: 1rem;
+
+      label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 600;
+        color: $text-color;
+      }
+
+      input {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid $border-color;
+        border-radius: 8px;
+        font-size: 1rem;
+
+        &:focus {
+          outline: none;
+          border-color: $primary-color;
+          box-shadow: 0 0 0 3px rgba($primary-color, 0.1);
+        }
+      }
+    }
+
+    .form-actions {
+      display: flex;
+      gap: 1rem;
+      margin-top: 1.5rem;
+
+      .btn {
+        padding: 0.75rem 1.5rem;
+        border: none;
+        border-radius: 8px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.3s ease;
+
+        &.btn-primary {
+          background: $primary-color;
+          color: white;
+
+          &:hover {
+            background: color.adjust($primary-color, $lightness: -10%);
+            transform: translateY(-2px);
+          }
+        }
+
+        &.btn-secondary {
+          background: $secondary-color;
+          color: white;
+
+          &:hover {
+            background: color.adjust($secondary-color, $lightness: -10%);
+            transform: translateY(-2px);
+          }
+        }
       }
     }
   }

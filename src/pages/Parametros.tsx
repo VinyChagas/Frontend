@@ -1,115 +1,61 @@
 import { useState, useEffect } from "react";
-import { Save, Settings, Monitor, CheckCircle, Play as PlayIcon } from "lucide-react";
+import { Save, Settings, Monitor, CheckCircle, Play as PlayIcon, Plus, Trash2 } from "lucide-react";
 import "../styles/Parametros.scss";
-
-// Tipos para os parâmetros de configuração
-interface ParametrosValidacao {
-  modoExecucao: 'manual' | 'automatico';
-  numeroNavegadores: number;
-  timeoutCaptcha: number;
-  tentativasMaximas: number;
-  modoDepuracao: boolean;
-  tipoMonitor: 'FHD' | 'QHD';
-}
-
-interface ParametrosAutomacao {
-  modoExecucao: 'manual' | 'automatico';
-  numeroNavegadores: number;
-  timeoutCaptcha: number;
-  tentativasMaximas: number;
-  modoDepuracao: boolean;
-  tipoMonitor: 'FHD' | 'QHD';
-  retryEmCasoDeErro: boolean;
-  maximoRetries: number;
-}
-
-
+import { useConfiguracaoAutomacao, type ParametrosValidacao, type ParametrosAutomacao } from "../hooks/useConfiguracaoAutomacao";
 
 export default function Parametros() {
-  const [configuracaoAtiva, setConfiguracaoAtiva] = useState<string>('padrao');
-  const [configuracoes, setConfiguracoes] = useState<Record<string, any>>({
-    padrao: {
-      nome: 'Configuração Padrão',
-      validacao: {
-        modoExecucao: 'manual',
-        numeroNavegadores: 1,
-        timeoutCaptcha: 30000,
-        tentativasMaximas: 3,
-        modoDepuracao: false,
-        tipoMonitor: 'FHD'
-      },
-      automacao: {
-        modoExecucao: 'automatico',
-        numeroNavegadores: 2,
-        timeoutCaptcha: 30000,
-        tentativasMaximas: 3,
-        modoDepuracao: false,
-        tipoMonitor: 'FHD',
-        retryEmCasoDeErro: true,
-        maximoRetries: 2
-      }
-    }
-  });
+  const {
+    configuracaoAtiva,
+    setConfiguracaoAtiva,
+    configuracoes,
+    obterConfiguracaoAtiva,
+    salvarConfiguracao,
+    adicionarConfiguracao,
+    removerConfiguracao,
+    criarPayloadExecucao
+  } = useConfiguracaoAutomacao();
 
   const [parametrosValidacao, setParametrosValidacao] = useState<ParametrosValidacao>(
-    configuracoes[configuracaoAtiva]?.validacao || configuracoes.padrao.validacao
+    obterConfiguracaoAtiva()?.validacao || {
+      modoExecucao: 'manual',
+      numeroNavegadores: 1,
+      timeoutCaptcha: 30000,
+      tentativasMaximas: 3,
+      modoDepuracao: false,
+      tipoMonitor: 'FHD'
+    }
   );
 
   const [parametrosAutomacao, setParametrosAutomacao] = useState<ParametrosAutomacao>(
-    configuracoes[configuracaoAtiva]?.automacao || configuracoes.padrao.automacao
+    obterConfiguracaoAtiva()?.automacao || {
+      modoExecucao: 'automatico',
+      numeroNavegadores: 2,
+      timeoutCaptcha: 30000,
+      tentativasMaximas: 3,
+      modoDepuracao: false,
+      tipoMonitor: 'FHD',
+      retryEmCasoDeErro: true,
+      maximoRetries: 2
+    }
   );
 
   const [mostrarPreview, setMostrarPreview] = useState(false);
   const [payloadPreview, setPayloadPreview] = useState<string>('');
+  const [novaConfiguracao, setNovaConfiguracao] = useState<string>('');
+  const [mostrarFormNovaConfig, setMostrarFormNovaConfig] = useState(false);
 
-  // Carregar configurações salvas do localStorage
+  // Sincroniza parâmetros quando a configuração ativa muda
   useEffect(() => {
-    const configsSalvas = localStorage.getItem('configuracoesSistema');
-    const ativaSalva = localStorage.getItem('configuracaoAtiva');
-    if (configsSalvas) {
-      try {
-        const configs = JSON.parse(configsSalvas);
-        setConfiguracoes(configs);
-        if (ativaSalva && configs[ativaSalva]) {
-          setConfiguracaoAtiva(ativaSalva);
-          setParametrosValidacao(configs[ativaSalva].validacao);
-          setParametrosAutomacao(configs[ativaSalva].automacao);
-          return;
-        }
-        if (configs[configuracaoAtiva]) {
-          setParametrosValidacao(configs[configuracaoAtiva].validacao);
-          setParametrosAutomacao(configs[configuracaoAtiva].automacao);
-        }
-      } catch (error) {
-        console.error('Erro ao carregar configurações:', error);
-      }
+    const configAtiva = obterConfiguracaoAtiva();
+    if (configAtiva) {
+      setParametrosValidacao(configAtiva.validacao);
+      setParametrosAutomacao(configAtiva.automacao);
     }
-  }, []);
+  }, [configuracaoAtiva, obterConfiguracaoAtiva]);
 
-  // Sincroniza parâmetros quando a configuração ativa muda e persiste no localStorage
-  useEffect(() => {
-    const cfg = configuracoes[configuracaoAtiva];
-    if (cfg) {
-      setParametrosValidacao(cfg.validacao);
-      setParametrosAutomacao(cfg.automacao);
-    }
-    localStorage.setItem('configuracaoAtiva', configuracaoAtiva);
-  }, [configuracaoAtiva, configuracoes]);
-
-  // Salvar configurações no localStorage
-  const salvarConfiguracao = () => {
-    const novaConfig = {
-      ...configuracoes,
-      [configuracaoAtiva]: {
-        nome: configuracoes[configuracaoAtiva]?.nome || 'Nova Configuração',
-        validacao: parametrosValidacao,
-        automacao: parametrosAutomacao,
-        ultimaModificacao: new Date().toISOString()
-      }
-    };
-    
-    setConfiguracoes(novaConfig);
-    localStorage.setItem('configuracoesSistema', JSON.stringify(novaConfig));
+  // Salvar configuração atual
+  const salvarConfiguracaoAtual = () => {
+    salvarConfiguracao(parametrosValidacao, parametrosAutomacao);
     
     // Mostrar feedback de sucesso
     const toast = document.createElement('div');
@@ -122,25 +68,57 @@ export default function Parametros() {
     }, 3000);
   };
 
+  // Criar nova configuração
+  const criarNovaConfiguracao = () => {
+    if (!novaConfiguracao.trim()) {
+      alert('Por favor, informe um nome para a nova configuração');
+      return;
+    }
+
+    if (configuracoes[novaConfiguracao]) {
+      alert('Já existe uma configuração com este nome');
+      return;
+    }
+
+    adicionarConfiguracao(novaConfiguracao, parametrosValidacao, parametrosAutomacao);
+    setConfiguracaoAtiva(novaConfiguracao);
+    setNovaConfiguracao('');
+    setMostrarFormNovaConfig(false);
+    
+    // Mostrar feedback de sucesso
+    const toast = document.createElement('div');
+    toast.className = 'toast-success';
+    toast.textContent = 'Nova configuração criada com sucesso!';
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+      document.body.removeChild(toast);
+    }, 3000);
+  };
+
   // Gerar preview do payload
   const gerarPreviewPayload = () => {
-    const payload = {
-      configuracao: configuracaoAtiva,
-      timestamp: new Date().toISOString(),
-      validacao: parametrosValidacao,
-      automacao: parametrosAutomacao
-    };
+    const payload = criarPayloadExecucao(
+      'a-partir', // modo padrão para preview
+      [2, 3, 4, 5], // linhas de exemplo
+      2, // linha inicial
+      5, // linha final
+      undefined, // linhas selecionadas
+      'Empresa Exemplo', // empresa de exemplo
+      '12.345.678/0001-90' // CNPJ de exemplo
+    );
     
     setPayloadPreview(JSON.stringify(payload, null, 2));
     setMostrarPreview(true);
   };
 
-  
-
   // Resetar para valores padrão
   const resetarParaPadrao = () => {
-    setParametrosValidacao(configuracoes.padrao.validacao);
-    setParametrosAutomacao(configuracoes.padrao.automacao);
+    const configPadrao = configuracoes.padrao;
+    if (configPadrao) {
+      setParametrosValidacao(configPadrao.validacao);
+      setParametrosAutomacao(configPadrao.automacao);
+    }
   };
 
   return (
@@ -157,13 +135,20 @@ export default function Parametros() {
         <div className="header-actions">
           <button 
             className="btn btn-secondary"
+            onClick={() => setMostrarFormNovaConfig(true)}
+          >
+            <Plus size={16} />
+            Nova Configuração
+          </button>
+          <button 
+            className="btn btn-secondary"
             onClick={resetarParaPadrao}
           >
             Resetar Padrão
           </button>
           <button 
             className="btn btn-primary"
-            onClick={salvarConfiguracao}
+            onClick={salvarConfiguracaoAtual}
           >
             <Save size={16} />
             Salvar Configuração
@@ -186,7 +171,50 @@ export default function Parametros() {
               </option>
             ))}
           </select>
+          
+          {configuracaoAtiva !== 'padrao' && (
+            <button
+              className="btn btn-danger btn-small"
+              onClick={() => removerConfiguracao(configuracaoAtiva)}
+              title="Remover configuração"
+            >
+              <Trash2 size={14} />
+            </button>
+          )}
         </div>
+
+        {/* Formulário para nova configuração */}
+        {mostrarFormNovaConfig && (
+          <div className="nova-config-form">
+            <div className="form-group">
+              <label htmlFor="nomeNovaConfig">Nome da Nova Configuração:</label>
+              <input
+                id="nomeNovaConfig"
+                type="text"
+                value={novaConfiguracao}
+                onChange={(e) => setNovaConfiguracao(e.target.value)}
+                placeholder="Digite o nome da configuração"
+              />
+            </div>
+            <div className="form-actions">
+              <button 
+                className="btn btn-primary"
+                onClick={criarNovaConfiguracao}
+              >
+                Criar
+              </button>
+              <button 
+                className="btn btn-secondary"
+                onClick={() => {
+                  setMostrarFormNovaConfig(false);
+                  setNovaConfiguracao('');
+                }}
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        )}
 
         <div className="parametros-grid">
           {/* Parâmetros de Validação */}
@@ -313,10 +341,10 @@ export default function Parametros() {
 
           {/* Parâmetros de Automação */}
           <div className="parametros-section">
-                      <div className="section-header">
-            <PlayIcon size={24} />
-            <h2>Parâmetros de Automação</h2>
-          </div>
+            <div className="section-header">
+              <PlayIcon size={24} />
+              <h2>Parâmetros de Automação</h2>
+            </div>
             
             <div className="parametros-form">
               <div className="form-group">
@@ -474,8 +502,6 @@ export default function Parametros() {
             <Monitor size={16} />
             Preview do Payload
           </button>
-          
-          
         </div>
 
         {/* Preview do Payload */}

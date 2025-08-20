@@ -2,6 +2,7 @@ import "../styles/Automacao.scss";
 import React, { useEffect, useState, useRef } from "react";
 import { io } from "socket.io-client";
 import * as XLSX from "xlsx";
+import { useConfiguracaoAutomacao } from "../hooks/useConfiguracaoAutomacao";
 
 // Base da API (permite sobrescrever via Vite env)
 const API_BASE_URL: string = (import.meta as any)?.env?.VITE_API_URL || "http://localhost:4000";
@@ -74,6 +75,9 @@ interface ModalSelecaoProps {
 const socket = io(API_BASE_URL);
 
 export default function Validador() {
+  // Hook para configurações de automação
+  const { criarPayloadExecucao, obterConfiguracaoAtiva } = useConfiguracaoAutomacao();
+  
   const [empresa, setEmpresa] = useState<Empresa>({ nome: "", cnpj: "", clientes: 0 });
   const [linhasAtivas, setLinhasAtivas] = useState<Linha[]>([]);
   const [linhasComErro, setLinhasComErro] = useState<Linha[]>([]);
@@ -401,14 +405,23 @@ export default function Validador() {
         ? linhasAtivas.map(l => l.linha)
         : [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 
-      console.log('🚀 [FRONTEND] Parâmetros:', {
-        modoExecucao: "Inicia",
-        linhas: linhasParaExecutar,
-        qtdNavegadores: 8,
-        modoResolucao: resolucao,
-        modoLogin: modoLogin,
-        modoDepuracao
-      });
+      // Criar payload completo integrando configurações e seleções
+      const payloadCompleto = criarPayloadExecucao(
+        modoExecucaoSelecionado,
+        linhasParaExecutar,
+        linhaInicial,
+        linhaFinal,
+        linhasSelecionadas,
+        empresa.nome,
+        empresa.cnpj
+      );
+
+      // Obter configuração ativa para usar os parâmetros
+      const configAtiva = obterConfiguracaoAtiva();
+      const configAutomacao = configAtiva?.automacao;
+
+      console.log('🚀 [FRONTEND] Payload completo:', payloadCompleto);
+      console.log('🚀 [FRONTEND] Configuração de automação:', configAutomacao);
 
       const res = await fetch(`${API_BASE_URL}/executar`, {
         method: "POST",
@@ -416,12 +429,22 @@ export default function Validador() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
+          // Payload completo para o backend
+          payloadCompleto,
+          
+          // Parâmetros específicos para compatibilidade
           modoExecucao: "Inicia",
           linhas: linhasParaExecutar,
-          qtdNavegadores: 8,
-          modoResolucao: resolucao,
-          modoLogin: modoLogin,
-          modoDepuracao
+          qtdNavegadores: configAutomacao?.numeroNavegadores || 8,
+          modoResolucao: configAutomacao?.tipoMonitor || 'FHD',
+          modoLogin: configAutomacao?.modoExecucao || 'automatico',
+          modoDepuracao: configAutomacao?.modoDepuracao || false,
+          
+          // Configurações adicionais
+          timeoutCaptcha: configAutomacao?.timeoutCaptcha || 30000,
+          tentativasMaximas: configAutomacao?.tentativasMaximas || 3,
+          retryEmCasoDeErro: configAutomacao?.retryEmCasoDeErro || false,
+          maximoRetries: configAutomacao?.maximoRetries || 2
         }),
       });
 
@@ -429,7 +452,7 @@ export default function Validador() {
       console.log('🚀 [FRONTEND] Resposta do backend:', resultado);
 
       if (resultado.sucesso) {
-        alert("✅ Validação iniciada com sucesso! O sistema usará 8 navegadores automaticamente.");
+        alert(`✅ Validação iniciada com sucesso! O sistema usará ${configAutomacao?.numeroNavegadores || 8} navegadores com configuração "${configAtiva?.nome || 'padrão'}".`);
         // Atualiza o status para mostrar que está ativa
         setStatusAutomacao({ pausada: false, parada: false });
       } else {
