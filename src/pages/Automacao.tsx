@@ -68,6 +68,15 @@ type ModoExecucao = 'a-partir' | 'intervalo' | 'selecionadas';
 
 const socket = io(API_BASE_URL);
 
+// Função utilitária para sanitizar nomes de arquivo (sincronizada com o backend)
+function sanitizarNomeArquivo(nome: string): string {
+  return nome
+    .replace(/[<>:"/\\|?*]/g, '') // Remove caracteres inválidos para Windows
+    .replace(/\s+/g, '_') // Substitui espaços por underscore
+    .replace(/_{2,}/g, '_') // Remove underscores duplicados
+    .trim();
+}
+
 export default function Automacao() {
   const navigate = useNavigate();
   const { empresaSelecionada, selecionarEmpresa } = useEmpresa();
@@ -102,6 +111,9 @@ export default function Automacao() {
     IM: ''
   });
   const [linhasParaProcessar, setLinhasParaProcessar] = useState<Linha[]>([]);
+
+  // Estado para controlar se a empresa possui planilha importada
+  const [empresaPossuiPlanilha, setEmpresaPossuiPlanilha] = useState(false);
 
   // Função para traduzir status em descrições amigáveis compatíveis com o backend
   const getEtapaDescricao = (status: string | undefined, stepName?: string): string => {
@@ -302,35 +314,114 @@ export default function Automacao() {
       setTodasLinhasImportadas([]);
       setLinhasAtivas([]);
       setLinhasComErro([]);
+      setEmpresaPossuiPlanilha(false);
       return;
     }
 
     // Carrega dados da empresa selecionada
     const carregarDadosEmpresa = async () => {
       try {
-        const nomeArquivoSeguro = empresaSelecionada.nome.replace(/[^\w\d]/g, '_');
-        const response = await fetch(`${API_BASE_URL}/api/validacoes/${encodeURIComponent(nomeArquivoSeguro)}`);
+        // Sanitiza nome usando a mesma lógica do backend
+        const nomeArquivoSeguro = sanitizarNomeArquivo(empresaSelecionada.nome);
         
-        if (response.ok) {
-          const dados = await response.json();
-          if (Array.isArray(dados)) {
-            setTodasLinhasImportadas(dados);
-            // Carrega também as linhas ativas se existirem
-            if (dados.length > 0) {
-              setLinhasAtivas(dados.filter(linha => linha.status && !linha.status.toLowerCase().includes('erro')));
+        // Log para debug
+        console.log(`🔍 [FRONTEND DEBUG] Nome original: "${empresaSelecionada.nome}"`);
+        console.log(`🔍 [FRONTEND DEBUG] Nome sanitizado: "${nomeArquivoSeguro}"`);
+        
+        // PRIMEIRO: Tenta carregar a planilha salva da empresa
+        console.log(`📊 [FRONTEND] Carregando planilha para empresa: ${empresaSelecionada.nome}`);
+        const responsePlanilha = await fetch(`${API_BASE_URL}/api/planilhas/${encodeURIComponent(nomeArquivoSeguro)}`);
+        
+        if (responsePlanilha.ok) {
+          const dadosPlanilha = await responsePlanilha.json();
+          if (Array.isArray(dadosPlanilha) && dadosPlanilha.length > 0) {
+            console.log(`✅ [FRONTEND] Planilha carregada com sucesso: ${dadosPlanilha.length} linhas`);
+            setTodasLinhasImportadas(dadosPlanilha);
+            setEmpresaPossuiPlanilha(true); // Marca que a empresa possui planilha
+            
+            // Mostra mensagem de sucesso para o usuário
+            console.log(`🎉 [FRONTEND] Planilha carregada automaticamente para ${empresaSelecionada.nome}`);
+            
+            // SEGUNDO: Tenta carregar dados de validação para obter status das linhas
+            console.log(`📊 [FRONTEND] Carregando dados de validação para empresa: ${empresaSelecionada.nome}`);
+            const responseValidacao = await fetch(`${API_BASE_URL}/api/validacoes/${encodeURIComponent(nomeArquivoSeguro)}`);
+            
+            if (responseValidacao.ok) {
+              const dadosValidacao = await responseValidacao.json();
+              if (Array.isArray(dadosValidacao) && dadosValidacao.length > 0) {
+                console.log(`✅ [FRONTEND] Dados de validação carregados: ${dadosValidacao.length} linhas`);
+                
+                // Mescla os dados da planilha com os dados de validação
+                const linhasMescladas = dadosPlanilha.map(linhaPlanilha => {
+                  const linhaValidacao = dadosValidacao.find(lv => lv.linha === linhaPlanilha.linha);
+                  return {
+                    ...linhaPlanilha,
+                    ...linhaValidacao, // Sobrescreve com dados de validação se existirem
+                    // Preserva dados da planilha que não estão na validação
+                    empresa: linhaPlanilha.empresa || linhaValidacao?.empresa,
+                    CNPJ: linhaPlanilha.CNPJ || linhaValidacao?.CNPJ,
+                    procurador: linhaPlanilha.procurador || linhaValidacao?.procurador,
+                    presumido: linhaPlanilha.presumido || linhaValidacao?.presumido,
+                    usuario: linhaPlanilha.usuario || linhaValidacao?.usuario,
+                    senha: linhaPlanilha.senha || linhaValidacao?.senha,
+                    responsavel: linhaPlanilha.responsavel || linhaValidacao?.responsavel,
+                    codSistema: linhaPlanilha.codSistema || linhaValidacao?.codSistema,
+                    mes: linhaPlanilha.mes || linhaValidacao?.mes,
+                    ano: linhaPlanilha.ano || linhaValidacao?.ano,
+                    IM: linhaPlanilha.IM || linhaValidacao?.IM,
+                  };
+                });
+                
+                setTodasLinhasImportadas(linhasMescladas);
+                
+                // Define linhas ativas baseado no status
+                const linhasComStatus = linhasMescladas.filter(linha => 
+                  linha.status && !linha.status.toLowerCase().includes('erro')
+                );
+                setLinhasAtivas(linhasComStatus);
+                
+                console.log(`✅ [FRONTEND] Dados mesclados com sucesso: ${linhasMescladas.length} linhas totais, ${linhasComStatus.length} linhas ativas`);
+              } else {
+                // Se não há dados de validação, usa apenas a planilha
+                console.log(`ℹ️ [FRONTEND] Nenhum dado de validação encontrado, usando apenas planilha`);
+                setLinhasAtivas([]);
+              }
+            } else {
+              // Se não conseguiu carregar validação, usa apenas a planilha
+              console.log(`ℹ️ [FRONTEND] Não foi possível carregar dados de validação, usando apenas planilha`);
+              setLinhasAtivas([]);
             }
           } else {
-            console.warn('Nenhum dado encontrado para esta contabilidade.');
+            console.warn('⚠️ [FRONTEND] Planilha encontrada mas sem dados válidos');
+            setTodasLinhasImportadas([]);
+            setLinhasAtivas([]);
+            setEmpresaPossuiPlanilha(false);
+          }
+        } else {
+          // Se não há planilha, tenta carregar apenas dados de validação (compatibilidade)
+          console.log(`ℹ️ [FRONTEND] Nenhuma planilha encontrada, tentando carregar dados de validação`);
+          setEmpresaPossuiPlanilha(false); // Marca que não possui planilha
+          const responseValidacao = await fetch(`${API_BASE_URL}/api/validacoes/${encodeURIComponent(nomeArquivoSeguro)}`);
+          
+          if (responseValidacao.ok) {
+            const dados = await responseValidacao.json();
+            if (Array.isArray(dados) && dados.length > 0) {
+              console.log(`✅ [FRONTEND] Dados de validação carregados: ${dados.length} linhas`);
+              setTodasLinhasImportadas(dados);
+              setLinhasAtivas(dados.filter(linha => linha.status && !linha.status.toLowerCase().includes('erro')));
+            } else {
+              console.log(`ℹ️ [FRONTEND] Nenhum dado encontrado para esta contabilidade`);
+              setTodasLinhasImportadas([]);
+              setLinhasAtivas([]);
+            }
+          } else {
+            console.log(`ℹ️ [FRONTEND] Nenhum dado encontrado para esta contabilidade`);
             setTodasLinhasImportadas([]);
             setLinhasAtivas([]);
           }
-        } else {
-          console.warn('Nenhum dado encontrado para esta contabilidade.');
-          setTodasLinhasImportadas([]);
-          setLinhasAtivas([]);
         }
       } catch (error) {
-        console.error('Erro ao carregar dados da empresa:', error);
+        console.error('❌ [FRONTEND] Erro ao carregar dados da empresa:', error);
         setTodasLinhasImportadas([]);
         setLinhasAtivas([]);
       }
@@ -347,6 +438,20 @@ export default function Automacao() {
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (file) {
+      // Se a empresa já possui planilha, mostra aviso de reimportação
+      if (empresaPossuiPlanilha) {
+        const confirmarReimportacao = window.confirm(
+          `⚠️ A empresa "${empresaSelecionada?.nome}" já possui uma planilha importada com ${todasLinhasImportadas.length} linhas.\n\n` +
+          `Reimportar a planilha irá substituir todos os dados existentes.\n\n` +
+          `Deseja continuar?`
+        );
+        
+        if (!confirmarReimportacao) {
+          e.target.value = "";
+          return;
+        }
+      }
+      
       const reader = new FileReader();
       reader.onload = async (event) => {
         const data = new Uint8Array(event.target?.result as ArrayBuffer);
@@ -456,6 +561,9 @@ export default function Automacao() {
         if (resultado.sucesso) {
           console.log('✅ Planilha salva automaticamente para a empresa:', empresaSelecionada.nome);
           console.log(`📊 Total de linhas salvas: ${resultado.totalLinhas}`);
+          
+          // Atualiza o estado para indicar que a empresa possui planilha
+          setEmpresaPossuiPlanilha(true);
           
           // Mostra informações sobre os dados processados
           const totalComMes = linhasProcessadas.filter(l => l.mes).length;
@@ -831,6 +939,47 @@ export default function Automacao() {
       IM: ''
     });
     setLinhasParaProcessar([]);
+    // Reseta estado de planilha
+    setEmpresaPossuiPlanilha(false);
+  };
+
+  // Função para limpar apenas a planilha da empresa atual
+  const limparPlanilhaEmpresa = async () => {
+    if (!empresaSelecionada) return;
+    
+    const confirmarLimpeza = window.confirm(
+      `🗑️ Deseja remover a planilha importada da empresa "${empresaSelecionada.nome}"?\n\n` +
+      `Esta ação irá remover ${todasLinhasImportadas.length} linhas e não pode ser desfeita.`
+    );
+    
+    if (!confirmarLimpeza) return;
+    
+    try {
+      // Chama a API para remover os arquivos da empresa
+      const res = await fetch(`${API_BASE_URL}/api/empresa-arquivos/${encodeURIComponent(empresaSelecionada.nome)}`, {
+        method: 'DELETE'
+      });
+      
+      if (res.ok) {
+        const resultado = await res.json();
+        console.log('✅ [FRONTEND] Planilha removida com sucesso:', resultado.mensagem);
+        
+        // Limpa os estados locais
+        setTodasLinhasImportadas([]);
+        setLinhasAtivas([]);
+        setLinhasComErro([]);
+        setEmpresaPossuiPlanilha(false);
+        
+        alert('✅ Planilha removida com sucesso!');
+      } else {
+        const erro = await res.json();
+        console.error('❌ [FRONTEND] Erro ao remover planilha:', erro);
+        alert('❌ Erro ao remover planilha: ' + (erro.erro || 'Erro desconhecido'));
+      }
+    } catch (error) {
+      console.error('❌ [FRONTEND] Erro ao remover planilha:', error);
+      alert('❌ Erro ao remover planilha: ' + (error instanceof Error ? error.message : 'Erro desconhecido'));
+    }
   };
 
   // Função para limpar dados da empresa atual (sem resetar controles)
@@ -857,6 +1006,8 @@ export default function Automacao() {
       IM: ''
     });
     setLinhasParaProcessar([]);
+    // Reseta estado de planilha
+    setEmpresaPossuiPlanilha(false);
   };
 
   // Funções para o modal de seleção
@@ -1021,6 +1172,11 @@ export default function Automacao() {
                       Escolha uma contabilidade para importar planilhas e executar validações
                     </p>
                   )}
+                  {empresaSelecionada && !empresaPossuiPlanilha && (
+                    <p className="empresa-planilha-hint">
+                      📥 Esta contabilidade ainda não possui planilha importada. Clique em "Importar Planilha" para começar.
+                    </p>
+                  )}
                 </div>
 
                 {/* Informações da empresa selecionada */}
@@ -1031,6 +1187,14 @@ export default function Automacao() {
                       <span><strong>CNPJ:</strong> {empresaSelecionada.cnpj}</span>
                       <span><strong>Clientes:</strong> {empresaSelecionada.clientes}</span>
                     </div>
+                    
+                    {/* Indicador de planilha importada */}
+                    {empresaPossuiPlanilha && (
+                      <div className="empresa-planilha-status">
+                        <span className="status-indicator success">📊</span>
+                        <span className="status-text">Planilha importada ({todasLinhasImportadas.length} linhas)</span>
+                      </div>
+                    )}
                   </>
                 ) : (
                   <>
@@ -1055,7 +1219,12 @@ export default function Automacao() {
                   className="automacao-btn btn-primary"
                   disabled={!empresaSelecionada}
                 >
-                  Importar Planilha
+                  {!empresaSelecionada 
+                    ? 'Selecione Empresa' 
+                    : empresaPossuiPlanilha 
+                      ? 'Reimportar Planilha' 
+                      : 'Importar Planilha'
+                  }
                 </button>
                 {todasLinhasImportadas.length > 0 && (
                   <button onClick={abrirModalSelecao} className="automacao-btn btn-success">
@@ -1064,7 +1233,12 @@ export default function Automacao() {
                 )}
                 {todasLinhasImportadas.length > 0 && (
                   <button onClick={limparDadosEmpresa} className="automacao-btn btn-secondary">
-                    Limpar Dados
+                    Limpar Dados da Tela
+                  </button>
+                )}
+                {todasLinhasImportadas.length > 0 && (
+                  <button onClick={limparPlanilhaEmpresa} className="automacao-btn btn-danger">
+                    Limpar Planilha
                   </button>
                 )}
               </div>
@@ -1257,11 +1431,25 @@ export default function Automacao() {
           <div className="automacao-tabela-container">
             <div className="tabela-dupla">
               <div className="tabela-wrapper">
-                <div className="tabela-titulo">Linhas Ativas</div>
+                <div className="tabela-titulo">
+                  Linhas Ativas
+                  {empresaPossuiPlanilha && (
+                    <span className="tabela-planilha-indicator">
+                      📊 Planilha salva
+                    </span>
+                  )}
+                </div>
                 {renderTabela(linhasAtivas)}
               </div>
               <div className="tabela-wrapper">
-                <div className="tabela-titulo">Linhas com Erro</div>
+                <div className="tabela-titulo">
+                  Linhas com Erro
+                  {empresaPossuiPlanilha && (
+                    <span className="tabela-planilha-indicator">
+                      📊 Planilha salva
+                    </span>
+                  )}
+                </div>
                 {renderTabelaErros(linhasComErro)}
               </div>
             </div>
