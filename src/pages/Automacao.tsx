@@ -127,6 +127,8 @@ export default function Automacao() {
     if (statusLower.includes('procurador')) return 'Conferindo procurador';
     if (statusLower.includes('cnpj')) return 'Validando CNPJ';
     if (statusLower.includes('carregando')) return 'Carregando sistema';
+    if (statusLower.includes('finalizando') || statusLower.includes('"finalizando"')) return 'Finalizando processo';
+    if (statusLower.includes('navegador encerrado') || statusLower.includes('browser closed') || statusLower.includes('driver quit')) return 'Navegador encerrado - Processo finalizado';
     if (statusLower.includes('sucesso')) return 'Processo concluído';
     if (statusLower.includes('erro')) return 'Erro no processo';
     if (statusLower.includes('nova senha')) return 'Nova senha necessária';
@@ -209,10 +211,11 @@ export default function Automacao() {
         }
 
         const lowerStatus = (status || '').toLowerCase();
-        const isFinalFromStatus = /(final|conclu|empresa validada|completo|terminad)/i.test(status || '');
+        const isFinalFromStatus = /(final|conclu|empresa validada|completo|terminad|finalizando|"finalizando"|navegador encerrado|browser closed|driver quit)/i.test(status || '');
         const isSuccessFromStatus = /(sucesso|conclu|ok)/i.test(status || '');
         const isErrorFromStatus = /(erro|falha|inválid|inval|fracass|nova senha)/i.test(status || '');
-        const isFinal = Boolean(info.isFinal || isFinalFromStatus);
+        const isFinalFromSteps = (typeof info.stepIndex === 'number' && typeof info.stepTotal === 'number' && info.stepTotal! > 0 && info.stepIndex! >= info.stepTotal! - 1);
+        const isFinal = Boolean(info.isFinal || isFinalFromStatus || isFinalFromSteps);
 
         // fallback baseado em estágios quando não veio percent
         let fallbackPercent: number | undefined = undefined;
@@ -226,6 +229,10 @@ export default function Automacao() {
           else if (lowerStatus.includes('dam')) fallbackPercent = 87.5; // 7/8
           else if (lowerStatus.includes('captcha')) fallbackPercent = 10;
           else if (lowerStatus.includes('carregando')) fallbackPercent = 50;
+          // Se o status for "Finalizando", considera como 100% independente da etapa
+          else if (lowerStatus.includes('finalizando') || lowerStatus.includes('"finalizando"')) fallbackPercent = 100;
+          // Se o navegador foi encerrado, considera como 100%
+          else if (lowerStatus.includes('navegador encerrado') || lowerStatus.includes('browser closed') || lowerStatus.includes('driver quit')) fallbackPercent = 100;
         }
 
         let atualizadas = prevAtivas.map((l) =>
@@ -239,9 +246,14 @@ export default function Automacao() {
                 stepTotal: info.stepTotal ?? l.stepTotal,
                 stepName: info.stepName ?? l.stepName,
                 progressPercent: (() => {
+                  // Prioriza status "Finalizando" sobre qualquer cálculo
+                  if (lowerStatus.includes('finalizando') || lowerStatus.includes('"finalizando"')) return 100;
+                  // Prioriza quando o navegador for encerrado
+                  if (lowerStatus.includes('navegador encerrado') || lowerStatus.includes('browser closed') || lowerStatus.includes('driver quit')) return 100;
+                  if (isFinal) return 100;
+                  
                   const base = percentFromInfo ?? l.progressPercent ?? fallbackPercent ?? 0;
                   const bounded = Math.max(0, Math.min(100, Math.round(base)));
-                  if (isFinal) return 100;
                   // Evita 100% antes do final
                   return Math.min(bounded, 99);
                 })(),
@@ -297,6 +309,8 @@ export default function Automacao() {
     }
     const percents = linhasAtivas.map((l) => {
       if (l.isFinalizada) return 100;
+      if (l.status?.toLowerCase().includes('finalizando') || l.status?.toLowerCase().includes('"finalizando"')) return 100;
+      if (l.status?.toLowerCase().includes('navegador encerrado') || l.status?.toLowerCase().includes('browser closed') || l.status?.toLowerCase().includes('driver quit')) return 100;
       if (typeof l.progressPercent === 'number') return Math.min(l.progressPercent, 99);
       if (l.status?.toLowerCase().includes('carregando')) return 50;
       if (l.status?.toLowerCase().includes('captcha')) return 10;
@@ -1305,14 +1319,6 @@ export default function Automacao() {
                     disabled={!empresaSelecionada || linhasAtivas.length === 0}
                   >
                     {!empresaSelecionada ? 'Selecione Empresa' : linhasAtivas.length === 0 ? 'Sem Linhas' : 'Executar'}
-                  </button>
-                  <button 
-                    className="automacao-btn btn-success" 
-                    type="button" 
-                    onClick={salvarNoBackend}
-                    disabled={!empresaSelecionada || linhasAtivas.length === 0}
-                  >
-                    Salvar
                   </button>
                   <button
                     className="automacao-btn btn-success"
