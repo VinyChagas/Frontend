@@ -1433,6 +1433,26 @@
   }
 }
 
+// Estilo de alerta para modal de reimportação
+.modal-content.modal-warning {
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  box-shadow: 0 20px 60px rgba(245, 158, 11, 0.25);
+}
+
+.modal-warning-icon {
+  font-size: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  margin: 0 auto 1rem auto;
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: white;
+  box-shadow: 0 8px 25px rgba(245, 158, 11, 0.4);
+}
+
 .modal-body {
   margin-bottom: 2rem;
 }

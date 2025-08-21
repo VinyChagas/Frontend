@@ -186,6 +186,9 @@ export default function Automacao() {
 
   // Estado para controlar se a empresa possui planilha importada
   const [empresaPossuiPlanilha, setEmpresaPossuiPlanilha] = useState(false);
+  // Modal de confirmação de reimportação
+  const [showModalReimportacao, setShowModalReimportacao] = useState(false);
+  const [arquivoPendente, setArquivoPendente] = useState<File | null>(null);
 
   // Função para traduzir status em descrições amigáveis compatíveis com o backend
   const getEtapaDescricao = (status: string | undefined, stepName?: string): string => {
@@ -559,95 +562,78 @@ export default function Automacao() {
     fileInputRef.current?.click();
   }
 
+  // Lê e processa o arquivo Excel selecionado
+  const lerEProcessarArquivoExcel = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      const data = new Uint8Array(event.target?.result as ArrayBuffer);
+      const workbook = XLSX.read(data, { type: "array" });
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(sheet);
+
+      const mapearColuna = (row: any, possiveisNomes: string[]): string => {
+        for (const nome of possiveisNomes) {
+          if (row[nome] !== undefined && row[nome] !== null && row[nome] !== '') {
+            return String(row[nome]).trim();
+          }
+        }
+        return '';
+      };
+
+      const linhasProcessadas = (rows as any[]).map((row: any, index: number) => {
+        const procurador = mapearColuna(row, ['Procurador', 'PROCURADOR', 'procurador']);
+        const presumido = mapearColuna(row, ['Presumido', 'PRESUMIDO', 'presumido']);
+        const empresa = mapearColuna(row, ['empresa', 'Empresa', 'EMPRESA', 'Nome', 'NOME']);
+        const cnpj = mapearColuna(row, ['CNPJ', 'cnpj', 'Cnpj']);
+        const usuario = mapearColuna(row, ['usuario', 'Usuario', 'USUARIO', 'User', 'user']);
+        const senha = mapearColuna(row, ['senha', 'Senha', 'SENHA', 'Password', 'password']);
+        const responsavel = mapearColuna(row, ['responsavel', 'Responsavel', 'RESPONSAVEL', 'Responsável']);
+        const codSistema = mapearColuna(row, ['codSistema', 'Cod. Sistema', 'COD SISTEMA', 'codigo', 'Código']);
+        const mes = mapearColuna(row, ['mes', 'Mês', 'MES', 'Mes', 'month', 'Month']);
+        const ano = mapearColuna(row, ['ano', 'Ano', 'ANO', 'year', 'Year']);
+        const im = mapearColuna(row, ['IM', 'im', 'Im', 'Inscrição Municipal', 'INSCRICAO MUNICIPAL']);
+
+        return {
+          linha: index + 2,
+          procurador: procurador.toUpperCase() || "",
+          presumido: presumido.toUpperCase() || "",
+          empresa: empresa || "",
+          CNPJ: cnpj || "",
+          usuario: usuario || "",
+          senha: senha || "",
+          responsavel: responsavel || "",
+          codSistema: codSistema || "",
+          mes: mes || "",
+          ano: ano || "",
+          IM: im || "",
+          status: "",
+          captchaImg: "",
+        };
+      });
+
+      const camposObrigatoriosVazios = linhasProcessadas.some(linha => !linha.mes || !linha.ano);
+      if (camposObrigatoriosVazios) {
+        setLinhasParaProcessar(linhasProcessadas);
+        setCamposObrigatorios({ mes: '07', ano: '2025', codSistema: '', IM: '' });
+        setShowModalCamposObrigatorios(true);
+        return;
+      }
+
+      processarLinhasImportadas(linhasProcessadas, file);
+    };
+    reader.readAsArrayBuffer(file);
+  };
+
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (file) {
-      // Se a empresa já possui planilha, mostra aviso de reimportação
       if (empresaPossuiPlanilha) {
-        const confirmarReimportacao = window.confirm(
-          `⚠️ A empresa "${empresaSelecionada?.nome}" já possui uma planilha importada com ${todasLinhasImportadas.length} linhas.\n\n` +
-          `Reimportar a planilha irá substituir todos os dados existentes.\n\n` +
-          `Deseja continuar?`
-        );
-        
-        if (!confirmarReimportacao) {
-          e.target.value = "";
-          return;
-        }
+        setArquivoPendente(file);
+        setShowModalReimportacao(true);
+        e.target.value = "";
+        return;
       }
-      
-      const reader = new FileReader();
-      reader.onload = async (event) => {
-        const data = new Uint8Array(event.target?.result as ArrayBuffer);
-        const workbook = XLSX.read(data, { type: "array" });
-        const sheet = workbook.Sheets[workbook.SheetNames[0]];
-        const rows = XLSX.utils.sheet_to_json(sheet);
-
-        // Mapeia as colunas da planilha com diferentes possíveis nomes
-        const mapearColuna = (row: any, possiveisNomes: string[]): string => {
-          for (const nome of possiveisNomes) {
-            if (row[nome] !== undefined && row[nome] !== null && row[nome] !== '') {
-              return String(row[nome]).trim();
-            }
-          }
-          return '';
-        };
-
-        // Processa localmente para exibir imediatamente
-        const linhasProcessadas = (rows as any[]).map((row: any, index: number) => {
-          // Mapeia as colunas com diferentes possíveis nomes
-          const procurador = mapearColuna(row, ['Procurador', 'PROCURADOR', 'procurador']);
-          const presumido = mapearColuna(row, ['Presumido', 'PRESUMIDO', 'presumido']);
-          const empresa = mapearColuna(row, ['empresa', 'Empresa', 'EMPRESA', 'Nome', 'NOME']);
-          const cnpj = mapearColuna(row, ['CNPJ', 'cnpj', 'Cnpj']);
-          const usuario = mapearColuna(row, ['usuario', 'Usuario', 'USUARIO', 'User', 'user']);
-          const senha = mapearColuna(row, ['senha', 'Senha', 'SENHA', 'Password', 'password']);
-          const responsavel = mapearColuna(row, ['responsavel', 'Responsavel', 'RESPONSAVEL', 'Responsável']);
-          const codSistema = mapearColuna(row, ['codSistema', 'Cod. Sistema', 'COD SISTEMA', 'codigo', 'Código']);
-          const mes = mapearColuna(row, ['mes', 'Mês', 'MES', 'Mes', 'month', 'Month']);
-          const ano = mapearColuna(row, ['ano', 'Ano', 'ANO', 'year', 'Year']);
-          const im = mapearColuna(row, ['IM', 'im', 'Im', 'Inscrição Municipal', 'INSCRICAO MUNICIPAL']);
-
-          return {
-            linha: index + 2,
-            procurador: procurador.toUpperCase() || "",
-            presumido: presumido.toUpperCase() || "",
-            empresa: empresa || "",
-            CNPJ: cnpj || "",
-            usuario: usuario || "",
-            senha: senha || "",
-            responsavel: responsavel || "",
-            codSistema: codSistema || "",
-            mes: mes || "",
-            ano: ano || "",
-            IM: im || "",
-            status: "",
-            captchaImg: "",
-          };
-        });
-
-        // Verifica se há campos obrigatórios vazios
-        const camposObrigatoriosVazios = linhasProcessadas.some(linha => 
-          !linha.mes || !linha.ano
-        );
-
-        if (camposObrigatoriosVazios) {
-          // Se há campos obrigatórios vazios, mostra modal para configurar
-          setLinhasParaProcessar(linhasProcessadas);
-          setCamposObrigatorios({
-            mes: '07',
-            ano: '2025',
-            codSistema: '',
-            IM: ''
-          });
-          setShowModalCamposObrigatorios(true);
-          return; // Não continua o processamento até o usuário configurar
-        }
-        
-        // Se não há campos obrigatórios vazios, continua normalmente
-        processarLinhasImportadas(linhasProcessadas, file);
-      };
-      reader.readAsArrayBuffer(file);
+      lerEProcessarArquivoExcel(file);
     }
     e.target.value = "";
   }
@@ -1463,6 +1449,19 @@ export default function Automacao() {
                   <button
                     className="automacao-btn btn-success"
                     type="button"
+                    onClick={async () => {
+                      try {
+                        const url = `${API_BASE_URL}/api/exportar-relatorios-pdf`;
+                        const link = document.createElement('a');
+                        link.href = url;
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                      } catch (err) {
+                        console.error('Erro ao exportar PDFs:', err);
+                        showError('Erro ao exportar PDFs', err instanceof Error ? err.message : 'Erro desconhecido');
+                      }
+                    }}
                   >
                     Exportar PDF
                   </button>
@@ -1842,6 +1841,45 @@ export default function Automacao() {
         </div>
       )}
       
+      {/* Modal de Confirmação de Reimportação */}
+      {showModalReimportacao && (
+        <div className="modal-overlay">
+          <div className="modal-content modal-warning">
+            <div className="modal-warning-icon">⚠️</div>
+            <h2>Reimportar Planilha?</h2>
+            <div className="modal-body">
+              <p>
+                A contabilidade <strong>{empresaSelecionada?.nome}</strong> já possui uma planilha importada
+                com <strong>{todasLinhasImportadas.length}</strong> linhas.
+              </p>
+              <p>
+                Reimportar irá <strong>substituir todos os dados existentes</strong>.
+              </p>
+              <p>Deseja continuar?</p>
+            </div>
+            <div className="modal-footer">
+              <button
+                className="automacao-btn btn-secondary"
+                onClick={() => { setShowModalReimportacao(false); setArquivoPendente(null); }}
+              >
+                Cancelar
+              </button>
+              <button
+                className="automacao-btn btn-warning"
+                onClick={() => {
+                  const f = arquivoPendente;
+                  setShowModalReimportacao(false);
+                  setArquivoPendente(null);
+                  if (f) lerEProcessarArquivoExcel(f);
+                }}
+              >
+                Reimportar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
