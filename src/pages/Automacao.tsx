@@ -5,11 +5,47 @@ import * as XLSX from "xlsx";
 import { useConfiguracaoAutomacao } from "../hooks/useConfiguracaoAutomacao";
 import { useEmpresa } from "../contexts/EmpresaContext";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+
 import EmpresaSelector from "../components/EmpresaSelector";
 
 // Base da API (permite sobrescrever via Vite env)
 const API_BASE_URL: string = (import.meta as any)?.env?.VITE_API_URL || "http://localhost:4000";
+
+// Sistema de Notificações
+interface Notification {
+  id: string;
+  type: 'success' | 'error' | 'warning' | 'info';
+  title: string;
+  message: string;
+  duration?: number;
+  icon?: string;
+}
+
+const NotificationSystem: React.FC<{ notifications: Notification[]; removeNotification: (id: string) => void }> = ({ notifications, removeNotification }) => {
+  return (
+    <div className="notification-container">
+      {notifications.map((notification) => (
+        <div
+          key={notification.id}
+          className={`notification notification-${notification.type}`}
+          onClick={() => removeNotification(notification.id)}
+        >
+          <div className="notification-icon">
+            {notification.icon || (notification.type === 'success' ? '✅' : notification.type === 'error' ? '❌' : notification.type === 'warning' ? '⚠️' : 'ℹ️')}
+          </div>
+          <div className="notification-content">
+            <div className="notification-title">{notification.title}</div>
+            <div className="notification-message">{notification.message}</div>
+          </div>
+          <button className="notification-close" onClick={(e) => { e.stopPropagation(); removeNotification(notification.id); }}>
+            ×
+          </button>
+          <div className="notification-progress"></div>
+        </div>
+      ))}
+    </div>
+  );
+};
 
 // Tipos de dados compatíveis com o backend main.mjs
 
@@ -79,10 +115,41 @@ function sanitizarNomeArquivo(nome: string): string {
 
 export default function Automacao() {
   const navigate = useNavigate();
-  const { empresaSelecionada, selecionarEmpresa } = useEmpresa();
+  const { empresaSelecionada } = useEmpresa();
   
   // Hook para configurações de automação
   const { criarPayloadExecucao, obterConfiguracaoAtiva } = useConfiguracaoAutomacao();
+  
+  // Estados para notificações
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+
+  const addNotification = (type: 'success' | 'error' | 'warning' | 'info', title: string, message: string, duration: number = 5000) => {
+    const id = Date.now().toString();
+    const newNotification: Notification = { id, type, title, message, duration };
+    
+    setNotifications(prev => [...prev, newNotification]);
+    
+    // Remove automaticamente após a duração especificada
+    setTimeout(() => {
+      removeNotification(id);
+    }, duration);
+  };
+
+  const removeNotification = (id: string) => {
+    setNotifications(prev => prev.filter(n => n.id !== id));
+  };
+
+  // Funções de conveniência para tipos específicos
+  const showSuccess = (title: string, message: string, duration?: number) => 
+    addNotification('success', title, message, duration);
+  
+  const showError = (title: string, message: string, duration?: number) => 
+    addNotification('error', title, message, duration);
+  
+  const showWarning = (title: string, message: string, duration?: number) => 
+    addNotification('warning', title, message, duration);
+  
+
   
   const [linhasAtivas, setLinhasAtivas] = useState<Linha[]>([]);
   const [linhasComErro, setLinhasComErro] = useState<Linha[]>([]);
@@ -93,6 +160,11 @@ export default function Automacao() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [globalProgress, setGlobalProgress] = useState<number>(0);
   const [statusAutomacao, setStatusAutomacao] = useState<{ pausada: boolean; parada: boolean }>({ pausada: false, parada: false });
+  
+  // Estados para mensagem de parada
+  const [showParadaMessage, setShowParadaMessage] = useState(false);
+  const [paradaMessage, setParadaMessage] = useState('');
+  const [paradaType, setParadaType] = useState<'info' | 'success' | 'warning'>('info');
   
   // Estados para o modal de seleção
   const [showModalSelecao, setShowModalSelecao] = useState(false);
@@ -173,6 +245,44 @@ export default function Automacao() {
     socket.on("captcha", handleCaptcha);
     return () => {
       socket.off("captcha", handleCaptcha);
+    };
+  }, []);
+
+  // Captura eventos de parada da automação
+  useEffect(() => {
+    function handleAutomacaoParada(data: any) {
+      console.log('🛑 [FRONTEND] Evento de parada recebido:', data);
+      setParadaMessage(data.mensagem || 'Automação sendo parada...');
+      setParadaType(data.tipo || 'warning');
+      setShowParadaMessage(true);
+      
+      // Limpar todas as linhas ativas imediatamente
+      setLinhasAtivas([]);
+      setGlobalProgress(0);
+      
+      // Atualizar status local
+      setStatusAutomacao(prev => ({ ...prev, parada: true }));
+      
+      // Ocultar mensagem após 3 segundos para mensagens de warning
+      setTimeout(fecharMensagemComFadeOut, 3000);
+    }
+
+    function handleAutomacaoParadaFinalizada(data: any) {
+      console.log('✅ [FRONTEND] Parada finalizada:', data);
+      setParadaMessage(data.mensagem || 'Automação parada com sucesso!');
+      setParadaType(data.tipo || 'success');
+      setShowParadaMessage(true);
+      
+      // Ocultar mensagem após 5 segundos
+      setTimeout(fecharMensagemComFadeOut, 5000);
+    }
+
+    socket.on("automacao-parada", handleAutomacaoParada);
+    socket.on("automacao-parada-finalizada", handleAutomacaoParadaFinalizada);
+    
+    return () => {
+      socket.off("automacao-parada", handleAutomacaoParada);
+      socket.off("automacao-parada-finalizada", handleAutomacaoParadaFinalizada);
     };
   }, []);
 
@@ -602,12 +712,12 @@ export default function Automacao() {
   // Função para executar validação compatível com o backend main.mjs
   const executarValidacao = async () => {
     if (!empresaSelecionada) {
-      alert('❌ Selecione uma empresa primeiro!');
+      showError('Empresa não selecionada', 'Selecione uma empresa primeiro!');
       return;
     }
 
     if (linhasAtivas.length === 0) {
-      alert('❌ Importe uma planilha e selecione linhas para execução!');
+      showError('Planilha não importada', 'Importe uma planilha e selecione linhas para execução!');
       return;
     }
 
@@ -686,48 +796,19 @@ export default function Automacao() {
       console.log('🚀 [FRONTEND] Resposta do backend:', resultado);
 
       if (resultado.sucesso) {
-        alert(`✅ Validação iniciada com sucesso! O sistema usará ${configAutomacao?.numeroNavegadores || 8} navegadores com configuração "${configAtiva?.nome || 'padrão'}".`);
+        showSuccess('Automação finalizada com sucesso!', 'A automação foi finalizada com sucesso!');
         // Atualiza o status para mostrar que está ativa
         setStatusAutomacao({ pausada: false, parada: false });
       } else {
-        alert("❌ Erro ao iniciar validação: " + (resultado.erro || 'Erro desconhecido'));
+        showError('Erro ao iniciar validação', resultado.erro || 'Erro desconhecido');
       }
     } catch (error) {
       console.error("❌ [FRONTEND] Erro ao executar validação:", error);
-      alert("❌ Erro ao executar validação: " + (error instanceof Error ? error.message : 'Erro desconhecido'));
+      showError('Erro ao executar validação', error instanceof Error ? error.message : 'Erro desconhecido');
     }
   };
 
-  const salvarNoBackend = async () => {
-    if (!empresaSelecionada) {
-      alert('❌ Selecione uma empresa primeiro!');
-      return;
-    }
-
-    try {
-      const res = await fetch(`${API_BASE_URL}/api/salvar-json`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          contabilidade: empresaSelecionada.nome,
-          dados: linhasAtivas,
-        }),
-      });
-
-      const resultado = await res.json();
-
-      if (resultado.sucesso) {
-        alert('✅ JSON salvo com sucesso no backend!');
-      } else {
-        alert('Erro ao salvar JSON: ' + resultado.erro);
-      }
-    } catch (err) {
-      console.error('Erro ao salvar JSON no backend:', err);
-      alert('Erro ao salvar JSON no backend.');
-    }
-  };
+  
 
   function renderTabela(linhas: Linha[]) {
     return (
@@ -933,6 +1014,9 @@ export default function Automacao() {
     setGlobalProgress(0);
     // Reseta status da automação
     setStatusAutomacao({ pausada: false, parada: false });
+    // Limpa mensagem de parada
+    setShowParadaMessage(false);
+    setParadaMessage('');
     // Limpa o input de arquivo
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
@@ -957,6 +1041,19 @@ export default function Automacao() {
     setEmpresaPossuiPlanilha(false);
   };
 
+  // Função utilitária para fechar mensagem com fade-out
+  const fecharMensagemComFadeOut = () => {
+    const messageElement = document.querySelector('.automacao-parada-message');
+    if (messageElement) {
+      messageElement.classList.add('fade-out');
+      setTimeout(() => {
+        setShowParadaMessage(false);
+      }, 400); // Tempo da animação
+    } else {
+      setShowParadaMessage(false);
+    }
+  };
+
   // Função para limpar apenas a planilha da empresa atual
   const limparPlanilhaEmpresa = async () => {
     if (!empresaSelecionada) return;
@@ -974,26 +1071,26 @@ export default function Automacao() {
         method: 'DELETE'
       });
       
-      if (res.ok) {
-        const resultado = await res.json();
-        console.log('✅ [FRONTEND] Planilha removida com sucesso:', resultado.mensagem);
-        
-        // Limpa os estados locais
-        setTodasLinhasImportadas([]);
-        setLinhasAtivas([]);
-        setLinhasComErro([]);
-        setEmpresaPossuiPlanilha(false);
-        
-        alert('✅ Planilha removida com sucesso!');
-      } else {
-        const erro = await res.json();
-        console.error('❌ [FRONTEND] Erro ao remover planilha:', erro);
-        alert('❌ Erro ao remover planilha: ' + (erro.erro || 'Erro desconhecido'));
+              if (res.ok) {
+          const resultado = await res.json();
+          console.log('✅ [FRONTEND] Planilha removida com sucesso:', resultado.mensagem);
+          
+          // Limpa os estados locais
+          setTodasLinhasImportadas([]);
+          setLinhasAtivas([]);
+          setLinhasComErro([]);
+          setEmpresaPossuiPlanilha(false);
+          
+          showSuccess('Planilha removida com sucesso!', 'A planilha foi removida da empresa.');
+        } else {
+          const erro = await res.json();
+          console.error('❌ [FRONTEND] Erro ao remover planilha:', erro);
+          showError('Erro ao remover planilha', erro.erro || 'Erro desconhecido');
+        }
+      } catch (error) {
+        console.error('❌ [FRONTEND] Erro ao remover planilha:', error);
+        showError('Erro ao remover planilha', error instanceof Error ? error.message : 'Erro desconhecido');
       }
-    } catch (error) {
-      console.error('❌ [FRONTEND] Erro ao remover planilha:', error);
-      alert('❌ Erro ao remover planilha: ' + (error instanceof Error ? error.message : 'Erro desconhecido'));
-    }
   };
 
   // Função para limpar dados da empresa atual (sem resetar controles)
@@ -1006,6 +1103,9 @@ export default function Automacao() {
     setCaptchaInput("");
     setLinhaCaptchaAtual(null);
     setGlobalProgress(0);
+    // Limpa mensagem de parada
+    setShowParadaMessage(false);
+    setParadaMessage('');
     setShowModalSelecao(false);
     setModoExecucaoSelecionado('a-partir');
     setLinhaInicial(0);
@@ -1027,7 +1127,7 @@ export default function Automacao() {
   // Funções para o modal de seleção
   const abrirModalSelecao = () => {
     if (todasLinhasImportadas.length === 0) {
-      alert('Por favor, importe uma planilha primeiro!');
+      showWarning('Planilha não importada', 'Por favor, importe uma planilha primeiro!');
       return;
     }
     
@@ -1054,7 +1154,7 @@ export default function Automacao() {
       case 'a-partir':
         // Todas as linhas a partir da linha inicial até o final
         if (linhaInicial < 2 || linhaInicial > todasLinhasImportadas.length + 1) {
-          alert('Linha inicial deve estar entre 2 e ' + (todasLinhasImportadas.length + 1));
+          showError('Linha inicial inválida', `Linha inicial deve estar entre 2 e ${todasLinhasImportadas.length + 1}`);
           return;
         }
         linhasParaExecutar = todasLinhasImportadas
@@ -1065,7 +1165,7 @@ export default function Automacao() {
       case 'intervalo':
         // Linhas no intervalo especificado
         if (linhaInicial < 2 || linhaFinal > todasLinhasImportadas.length + 1 || linhaInicial > linhaFinal) {
-          alert('Intervalo inválido. Linha inicial deve ser menor que linha final e estar entre 2 e ' + (todasLinhasImportadas.length + 1));
+          showError('Intervalo inválido', `Linha inicial deve ser menor que linha final e estar entre 2 e ${todasLinhasImportadas.length + 1}`);
           return;
         }
         linhasParaExecutar = todasLinhasImportadas
@@ -1076,7 +1176,7 @@ export default function Automacao() {
       case 'selecionadas':
         // Apenas as linhas selecionadas
         if (linhasSelecionadas.length === 0) {
-          alert('Selecione pelo menos uma linha para execução!');
+          showError('Nenhuma linha selecionada', 'Selecione pelo menos uma linha para execução!');
           return;
         }
         linhasParaExecutar = linhasSelecionadas.sort((a, b) => a - b);
@@ -1084,7 +1184,7 @@ export default function Automacao() {
     }
 
     if (linhasParaExecutar.length === 0) {
-      alert('Nenhuma linha selecionada para execução!');
+      showError('Nenhuma linha selecionada', 'Nenhuma linha selecionada para execução!');
       return;
     }
 
@@ -1150,6 +1250,46 @@ export default function Automacao() {
 
   return (
     <div className="automacao-page-container">
+      {/* Sistema de Notificações */}
+      <NotificationSystem 
+        notifications={notifications} 
+        removeNotification={removeNotification} 
+      />
+      
+      {/* Mensagem de Parada */}
+      {showParadaMessage && (
+        <div className={`automacao-parada-message ${paradaType}`}>
+          <div className="parada-message-content">
+            <div className="parada-status-indicator">
+              <div className="status-dot"></div>
+            </div>
+            <div className="parada-content">
+              <div className="parada-title">
+                {paradaType === 'success' ? 'Automação Parada' : 
+                 paradaType === 'warning' ? 'Parando Automação' : 'Informação'}
+              </div>
+              <div className="parada-message">
+                {paradaMessage}
+              </div>
+            </div>
+            <button 
+              className="parada-close-btn"
+              onClick={fecharMensagemComFadeOut}
+              aria-label="Fechar mensagem"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+          </div>
+          {/* Barra de progresso sutil */}
+          <div className="parada-progress-bar">
+            <div className="parada-progress-fill"></div>
+          </div>
+        </div>
+      )}
+      
       <div className="automacao-card">
         <div className="automacao-container">
           <div className="automacao-header">
@@ -1343,30 +1483,30 @@ export default function Automacao() {
                           });
                           const resultado = await res.json();
                           
-                          if (resultado.sucesso) {
-                            alert("▶️ Automação continuada com sucesso!");
-                            setStatusAutomacao(prev => ({ ...prev, pausada: false }));
-                          } else {
-                            alert("❌ Erro ao continuar automação: " + (resultado.erro || 'Erro desconhecido'));
-                          }
+                                                  if (resultado.sucesso) {
+                          showSuccess("Automação continuada", "▶️ Automação continuada com sucesso!");
+                          setStatusAutomacao(prev => ({ ...prev, pausada: false }));
                         } else {
-                          console.log('⏸️ [FRONTEND] Pausando automação...');
-                          const res = await fetch(`${API_BASE_URL}/api/pausar-automacao`, { 
-                            method: "POST" 
-                          });
-                          const resultado = await res.json();
-                          
-                          if (resultado.sucesso) {
-                            alert("⏸️ Automação pausada com sucesso!");
-                            setStatusAutomacao(prev => ({ ...prev, pausada: true }));
-                          } else {
-                            alert("❌ Erro ao pausar automação: " + (resultado.erro || 'Erro desconhecido'));
-                          }
+                          showError("Erro ao continuar automação", resultado.erro || 'Erro desconhecido');
                         }
-                      } catch (error) {
-                        console.error('❌ [FRONTEND] Erro ao controlar automação:', error);
-                        alert("❌ Erro ao controlar automação: " + (error instanceof Error ? error.message : 'Erro desconhecido'));
+                      } else {
+                        console.log('⏸️ [FRONTEND] Pausando automação...');
+                        const res = await fetch(`${API_BASE_URL}/api/pausar-automacao`, { 
+                          method: "POST" 
+                        });
+                        const resultado = await res.json();
+                        
+                        if (resultado.sucesso) {
+                          showSuccess("Automação pausada", "⏸️ Automação pausada com sucesso!");
+                          setStatusAutomacao(prev => ({ ...prev, pausada: true }));
+                        } else {
+                          showError("Erro ao pausar automação", resultado.erro || 'Erro desconhecido');
+                        }
                       }
+                    } catch (error) {
+                      console.error('❌ [FRONTEND] Erro ao controlar automação:', error);
+                      showError("Erro ao controlar automação", error instanceof Error ? error.message : 'Erro desconhecido');
+                    }
                     }}
                     disabled={statusAutomacao.parada}
                   >
@@ -1379,22 +1519,42 @@ export default function Automacao() {
                     onClick={async () => {
                       try {
                         console.log('🛑 [FRONTEND] Parando automação...');
+                        
+                        // Mostrar mensagem de parada imediatamente
+                        setParadaMessage('Parando automação...');
+                        setParadaType('warning');
+                        setShowParadaMessage(true);
+                        
+                        // Limpar linhas ativas imediatamente para feedback visual
+                        setLinhasAtivas([]);
+                        setGlobalProgress(0);
+                        
                         const res = await fetch(`${API_BASE_URL}/api/parar-automacao`, { 
                           method: "POST" 
                         });
                         const resultado = await res.json();
                         
                         if (resultado.sucesso) {
-                          alert("⏹️ Automação parada com sucesso!");
                           console.log('✅ [FRONTEND] Automação parada:', resultado.mensagem);
                           // Atualiza o status imediatamente
                           setStatusAutomacao(prev => ({ ...prev, parada: true }));
+                          
+                          // Mensagem de sucesso será mostrada via socket
                         } else {
-                          alert("❌ Erro ao parar automação: " + (resultado.erro || 'Erro desconhecido'));
+                          console.error('❌ [FRONTEND] Erro ao parar automação:', resultado.erro);
+                          setParadaMessage('Erro ao parar automação: ' + (resultado.erro || 'Erro desconhecido'));
+                          setParadaType('warning');
+                          
+                          // Ocultar mensagem de erro após 3 segundos
+                          setTimeout(fecharMensagemComFadeOut, 3000);
                         }
                       } catch (error) {
                         console.error('❌ [FRONTEND] Erro ao parar automação:', error);
-                        alert("❌ Erro ao parar automação: " + (error instanceof Error ? error.message : 'Erro desconhecido'));
+                        setParadaMessage('Erro ao parar automação: ' + (error instanceof Error ? error.message : 'Erro desconhecido'));
+                        setParadaType('warning');
+                        
+                        // Ocultar mensagem de erro após 3 segundos
+                        setTimeout(fecharMensagemComFadeOut, 3000);
                       }
                     }}
                     disabled={statusAutomacao.parada}
@@ -1414,16 +1574,16 @@ export default function Automacao() {
                         const resultado = await res.json();
                         
                         if (resultado.sucesso) {
-                          alert("🔄 Controles resetados com sucesso!");
+                          showSuccess("Controles resetados", "🔄 Controles resetados com sucesso!");
                           console.log('✅ [FRONTEND] Controles resetados:', resultado.mensagem);
                           // Reseta a tela após resetar os controles no backend
                           resetarTela();
                         } else {
-                          alert("❌ Erro ao resetar controles: " + (resultado.erro || 'Erro desconhecido'));
+                          showError("Erro ao resetar controles", resultado.erro || 'Erro desconhecido');
                         }
                       } catch (error) {
                         console.error('❌ [FRONTEND] Erro ao resetar controles:', error);
-                        alert("❌ Erro ao resetar controles: " + (error instanceof Error ? error.message : 'Erro desconhecido'));
+                        showError("Erro ao resetar controles", error instanceof Error ? error.message : 'Erro desconhecido');
                       }
                     }}
                   >
@@ -1670,7 +1830,7 @@ export default function Automacao() {
                     processarLinhasImportadas(linhasParaProcessar, new File([], 'planilha_importada.xlsx'));
                     setLinhasParaProcessar([]);
                   } else {
-                    alert('Por favor, preencha pelo menos o mês e ano padrão!');
+                    showWarning('Campos obrigatórios', 'Por favor, preencha pelo menos o mês e ano padrão!');
                   }
                 }}
                 disabled={!camposObrigatorios.mes || !camposObrigatorios.ano}
