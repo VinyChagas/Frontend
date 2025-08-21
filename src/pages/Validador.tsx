@@ -335,6 +335,29 @@ function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
         captchaImg: "",
       }));
       setLinhasAtivas(linhasProcessadas);
+
+      // Salva automaticamente no backend em assets/planilhas com sufixo _validation.json
+      (async () => {
+        try {
+          const res = await fetch(`${API_BASE_URL}/api/salvar-planilha-validation`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contabilidade: empresa.nome,
+              dados: linhasProcessadas,
+              nomeArquivoOriginal: file.name
+            })
+          });
+          const resultado = await res.json();
+          if (!res.ok || !resultado.sucesso) {
+            console.warn('Falha ao salvar planilha (validation) no backend:', resultado?.erro || res.statusText);
+          } else {
+            console.log('✅ Planilha (validation) salva:', resultado.caminho);
+          }
+        } catch (err) {
+          console.warn('Erro ao salvar planilha (validation) no backend:', err);
+        }
+      })();
     };
     reader.readAsArrayBuffer(file);
   }
