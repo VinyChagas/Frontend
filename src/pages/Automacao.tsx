@@ -93,6 +93,16 @@ export default function Automacao() {
   const [linhaFinal, setLinhaFinal] = useState<number>(0);
   const [linhasSelecionadas, setLinhasSelecionadas] = useState<number[]>([]);
 
+  // Estados para o modal de configuração de campos obrigatórios
+  const [showModalCamposObrigatorios, setShowModalCamposObrigatorios] = useState(false);
+  const [camposObrigatorios, setCamposObrigatorios] = useState({
+    mes: '',
+    ano: '',
+    codSistema: '',
+    IM: ''
+  });
+  const [linhasParaProcessar, setLinhasParaProcessar] = useState<Linha[]>([]);
+
   // Função para traduzir status em descrições amigáveis compatíveis com o backend
   const getEtapaDescricao = (status: string | undefined, stepName?: string): string => {
     if (stepName) return stepName;
@@ -344,59 +354,128 @@ export default function Automacao() {
         const sheet = workbook.Sheets[workbook.SheetNames[0]];
         const rows = XLSX.utils.sheet_to_json(sheet);
 
-        // Processa localmente para exibir imediatamente
-        const linhasProcessadas = (rows as any[]).map((row: any, index: number) => ({
-          linha: index + 2,
-          procurador: row["Procurador"]?.toUpperCase() || "",
-          presumido: row["Presumido"]?.toUpperCase() || "",
-          empresa: row["empresa"] || "",
-          CNPJ: row["CNPJ"] || "",
-          usuario: row["usuario"] || "",
-          senha: row["senha"] || "",
-          responsavel: row["responsavel"] || "",
-          codSistema: row["codSistema"] || "",
-          mes: row["mes"] || "",
-          ano: row["ano"] || "",
-          IM: row["IM"] || "",
-          status: "",
-          captchaImg: "",
-        }));
-        
-        setTodasLinhasImportadas(linhasProcessadas);
-        // Não define linhas ativas automaticamente - usuário deve selecionar via modal
-        setLinhasAtivas([]);
-
-        // Salva automaticamente os dados da planilha vinculados à empresa
-        if (empresaSelecionada) {
-          try {
-            const res = await fetch(`${API_BASE_URL}/api/salvar-planilha`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                contabilidade: empresaSelecionada.nome,
-                dados: linhasProcessadas,
-                nomeArquivoOriginal: file.name,
-              }),
-            });
-
-            const resultado = await res.json();
-            if (resultado.sucesso) {
-              console.log('✅ Planilha salva automaticamente para a empresa:', empresaSelecionada.nome);
-              console.log(`📊 Total de linhas salvas: ${resultado.totalLinhas}`);
-            } else {
-              console.warn('⚠️ Erro ao salvar planilha automaticamente:', resultado.erro);
+        // Mapeia as colunas da planilha com diferentes possíveis nomes
+        const mapearColuna = (row: any, possiveisNomes: string[]): string => {
+          for (const nome of possiveisNomes) {
+            if (row[nome] !== undefined && row[nome] !== null && row[nome] !== '') {
+              return String(row[nome]).trim();
             }
-          } catch (error) {
-            console.error('❌ Erro ao salvar planilha automaticamente:', error);
           }
+          return '';
+        };
+
+        // Processa localmente para exibir imediatamente
+        const linhasProcessadas = (rows as any[]).map((row: any, index: number) => {
+          // Mapeia as colunas com diferentes possíveis nomes
+          const procurador = mapearColuna(row, ['Procurador', 'PROCURADOR', 'procurador']);
+          const presumido = mapearColuna(row, ['Presumido', 'PRESUMIDO', 'presumido']);
+          const empresa = mapearColuna(row, ['empresa', 'Empresa', 'EMPRESA', 'Nome', 'NOME']);
+          const cnpj = mapearColuna(row, ['CNPJ', 'cnpj', 'Cnpj']);
+          const usuario = mapearColuna(row, ['usuario', 'Usuario', 'USUARIO', 'User', 'user']);
+          const senha = mapearColuna(row, ['senha', 'Senha', 'SENHA', 'Password', 'password']);
+          const responsavel = mapearColuna(row, ['responsavel', 'Responsavel', 'RESPONSAVEL', 'Responsável']);
+          const codSistema = mapearColuna(row, ['codSistema', 'Cod. Sistema', 'COD SISTEMA', 'codigo', 'Código']);
+          const mes = mapearColuna(row, ['mes', 'Mês', 'MES', 'Mes', 'month', 'Month']);
+          const ano = mapearColuna(row, ['ano', 'Ano', 'ANO', 'year', 'Year']);
+          const im = mapearColuna(row, ['IM', 'im', 'Im', 'Inscrição Municipal', 'INSCRICAO MUNICIPAL']);
+
+          return {
+            linha: index + 2,
+            procurador: procurador.toUpperCase() || "",
+            presumido: presumido.toUpperCase() || "",
+            empresa: empresa || "",
+            CNPJ: cnpj || "",
+            usuario: usuario || "",
+            senha: senha || "",
+            responsavel: responsavel || "",
+            codSistema: codSistema || "",
+            mes: mes || "",
+            ano: ano || "",
+            IM: im || "",
+            status: "",
+            captchaImg: "",
+          };
+        });
+
+        // Verifica se há campos obrigatórios vazios
+        const camposObrigatoriosVazios = linhasProcessadas.some(linha => 
+          !linha.mes || !linha.ano
+        );
+
+        if (camposObrigatoriosVazios) {
+          // Se há campos obrigatórios vazios, mostra modal para configurar
+          setLinhasParaProcessar(linhasProcessadas);
+          setCamposObrigatorios({
+            mes: '07',
+            ano: '2025',
+            codSistema: '',
+            IM: ''
+          });
+          setShowModalCamposObrigatorios(true);
+          return; // Não continua o processamento até o usuário configurar
         }
+        
+        // Se não há campos obrigatórios vazios, continua normalmente
+        processarLinhasImportadas(linhasProcessadas, file);
       };
       reader.readAsArrayBuffer(file);
     }
     e.target.value = "";
   }
+
+  // Função para processar as linhas importadas após configuração dos campos obrigatórios
+  const processarLinhasImportadas = async (linhasProcessadas: Linha[], file: File) => {
+    // Aplica os valores padrão para todas as linhas
+    linhasProcessadas.forEach(linha => {
+      if (!linha.mes) linha.mes = camposObrigatorios.mes;
+      if (!linha.ano) linha.ano = camposObrigatorios.ano;
+      if (!linha.codSistema && camposObrigatorios.codSistema) linha.codSistema = camposObrigatorios.codSistema;
+      if (!linha.IM && camposObrigatorios.IM) linha.IM = camposObrigatorios.IM;
+    });
+    
+    setTodasLinhasImportadas(linhasProcessadas);
+    // Não define linhas ativas automaticamente - usuário deve selecionar via modal
+    setLinhasAtivas([]);
+
+    // Salva automaticamente os dados da planilha vinculados à empresa
+    if (empresaSelecionada) {
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/salvar-planilha`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            contabilidade: empresaSelecionada.nome,
+            dados: linhasProcessadas,
+            nomeArquivoOriginal: file.name,
+          }),
+        });
+
+        const resultado = await res.json();
+        if (resultado.sucesso) {
+          console.log('✅ Planilha salva automaticamente para a empresa:', empresaSelecionada.nome);
+          console.log(`📊 Total de linhas salvas: ${resultado.totalLinhas}`);
+          
+          // Mostra informações sobre os dados processados
+          const totalComMes = linhasProcessadas.filter(l => l.mes).length;
+          const totalComAno = linhasProcessadas.filter(l => l.ano).length;
+          const totalComCodSistema = linhasProcessadas.filter(l => l.codSistema).length;
+          const totalComIM = linhasProcessadas.filter(l => l.IM).length;
+          
+          console.log(`📋 Resumo dos dados processados:`);
+          console.log(`   - Mês preenchido: ${totalComMes}/${linhasProcessadas.length}`);
+          console.log(`   - Ano preenchido: ${totalComAno}/${linhasProcessadas.length}`);
+          console.log(`   - Código do Sistema: ${totalComCodSistema}/${linhasProcessadas.length}`);
+          console.log(`   - IM: ${totalComIM}/${linhasProcessadas.length}`);
+        } else {
+          console.warn('⚠️ Erro ao salvar planilha automaticamente:', resultado.erro);
+        }
+      } catch (error) {
+        console.error('❌ Erro ao salvar planilha automaticamente:', error);
+      }
+    }
+  };
 
   // Função para executar validação compatível com o backend main.mjs
   const executarValidacao = async () => {
@@ -743,6 +822,15 @@ export default function Automacao() {
     setLinhaInicial(0);
     setLinhaFinal(0);
     setLinhasSelecionadas([]);
+    // Reseta estados do modal de campos obrigatórios
+    setShowModalCamposObrigatorios(false);
+    setCamposObrigatorios({
+      mes: '',
+      ano: '',
+      codSistema: '',
+      IM: ''
+    });
+    setLinhasParaProcessar([]);
   };
 
   // Função para limpar dados da empresa atual (sem resetar controles)
@@ -760,6 +848,15 @@ export default function Automacao() {
     setLinhaInicial(0);
     setLinhaFinal(0);
     setLinhasSelecionadas([]);
+    // Limpa estados do modal de campos obrigatórios
+    setShowModalCamposObrigatorios(false);
+    setCamposObrigatorios({
+      mes: '',
+      ano: '',
+      codSistema: '',
+      IM: ''
+    });
+    setLinhasParaProcessar([]);
   };
 
   // Funções para o modal de seleção
@@ -1291,6 +1388,100 @@ export default function Automacao() {
               </button>
               <button className="automacao-btn btn-primary" onClick={confirmarSelecao}>
                 Confirmar Seleção
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Configuração de Campos Obrigatórios */}
+      {showModalCamposObrigatorios && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <h2>Configurar Campos Obrigatórios</h2>
+            <div className="modal-body">
+              <div className="modal-info-header">
+                <p>A planilha importada não possui alguns campos obrigatórios. Configure os valores padrão:</p>
+                <p><strong>Total de linhas:</strong> {linhasParaProcessar.length}</p>
+              </div>
+              
+              <div className="modal-campos-obrigatorios">
+                <div className="campo-grupo">
+                  <label htmlFor="mes-padrao">Mês Padrão: <span className="obrigatorio">*</span></label>
+                  <input
+                    id="mes-padrao"
+                    type="text"
+                    value={camposObrigatorios.mes}
+                    onChange={(e) => setCamposObrigatorios(prev => ({ ...prev, mes: e.target.value }))}
+                    placeholder="Ex: 07, Julho, 7"
+                    required
+                  />
+                  <small>Mês para todas as linhas que não possuem este campo</small>
+                </div>
+                
+                <div className="campo-grupo">
+                  <label htmlFor="ano-padrao">Ano Padrão: <span className="obrigatorio">*</span></label>
+                  <input
+                    id="ano-padrao"
+                    type="text"
+                    value={camposObrigatorios.ano}
+                    onChange={(e) => setCamposObrigatorios(prev => ({ ...prev, ano: e.target.value }))}
+                    placeholder="Ex: 2025"
+                    required
+                  />
+                  <small>Ano para todas as linhas que não possuem este campo</small>
+                </div>
+                
+                <div className="campo-grupo">
+                  <label htmlFor="cod-sistema-padrao">Código do Sistema (Opcional):</label>
+                  <input
+                    id="cod-sistema-padrao"
+                    type="text"
+                    value={camposObrigatorios.codSistema}
+                    onChange={(e) => setCamposObrigatorios(prev => ({ ...prev, codSistema: e.target.value }))}
+                    placeholder="Ex: SISTEMA001"
+                  />
+                  <small>Código do sistema para todas as linhas que não possuem este campo</small>
+                </div>
+                
+                <div className="campo-grupo">
+                  <label htmlFor="im-padrao">IM - Inscrição Municipal (Opcional):</label>
+                  <input
+                    id="im-padrao"
+                    type="text"
+                    value={camposObrigatorios.IM}
+                    onChange={(e) => setCamposObrigatorios(prev => ({ ...prev, IM: e.target.value }))}
+                    placeholder="Ex: 123456"
+                  />
+                  <small>Inscrição municipal para todas as linhas que não possuem este campo</small>
+                </div>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button 
+                className="automacao-btn btn-secondary" 
+                onClick={() => {
+                  setShowModalCamposObrigatorios(false);
+                  setLinhasParaProcessar([]);
+                }}
+              >
+                Cancelar
+              </button>
+              <button 
+                className="automacao-btn btn-primary" 
+                onClick={() => {
+                  if (camposObrigatorios.mes && camposObrigatorios.ano) {
+                    setShowModalCamposObrigatorios(false);
+                    // Processa as linhas com os campos configurados
+                    processarLinhasImportadas(linhasParaProcessar, new File([], 'planilha_importada.xlsx'));
+                    setLinhasParaProcessar([]);
+                  } else {
+                    alert('Por favor, preencha pelo menos o mês e ano padrão!');
+                  }
+                }}
+                disabled={!camposObrigatorios.mes || !camposObrigatorios.ano}
+              >
+                Confirmar e Processar
               </button>
             </div>
           </div>

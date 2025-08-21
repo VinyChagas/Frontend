@@ -1696,5 +1696,53 @@
   }
 }
 
+// Modal de Campos Obrigatórios
+.modal-campos-obrigatorios {
+  margin: 1rem 0;
+  
+  .campo-grupo {
+    margin-bottom: 1.5rem;
+    
+    label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      color: #374151;
+      
+      .obrigatorio {
+        color: #dc2626;
+        font-weight: bold;
+      }
+    }
+    
+    input {
+      width: 100%;
+      padding: 0.75rem;
+      border: 2px solid #d1d5db;
+      border-radius: 0.5rem;
+      font-size: 1rem;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      
+      &:focus {
+        outline: none;
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+      }
+      
+      &::placeholder {
+        color: #9ca3af;
+      }
+    }
+    
+    small {
+      display: block;
+      margin-top: 0.25rem;
+      color: #6b7280;
+      font-size: 0.875rem;
+      font-style: italic;
+    }
+  }
+}
+
 
 
