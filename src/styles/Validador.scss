@@ -1,7 +1,11 @@
-.validador-container {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
+// Remova ou comente a linha abaixo para evitar sobrescrever estilos essenciais do Automacao.scss
+// @use './Automacao.scss' as *;
+
+// Se precisar de ajustes específicos para Validador, adicione aqui abaixo.
+// Exemplo: sobrescrever algo só para Validador, se necessário.
+
+// Exemplo de ajuste global para o body da página Validador:
+.validador-body-ajuste {
   padding: 0 0 0.5rem 0; // ainda menos espaçamento inferior
   min-height: 100vh;
   background: #f8fafc;
