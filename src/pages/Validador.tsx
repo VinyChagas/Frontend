@@ -334,6 +334,7 @@ useEffect(() => {
         const sheet = workbook.Sheets[workbook.SheetNames[0]];
         const rows = XLSX.utils.sheet_to_json(sheet);
 
+<<<<<<< HEAD
         const linhasProcessadas = (rows as any[]).map((row: any, index: number) => ({
           linha: index + 2,
           procurador: row["Procurador"]?.toUpperCase() || "",
@@ -351,6 +352,46 @@ useEffect(() => {
       reader.readAsArrayBuffer(file);
     }
     e.target.value = "";
+=======
+      // Processa localmente para exibir imediatamente
+      const linhasProcessadas = (rows as any[]).map((row: any, index: number) => ({
+        linha: index + 2,
+        procurador: row["Procurador"]?.toUpperCase() || "",
+        presumido: row["Presumido"]?.toUpperCase() || "",
+        empresa: row["empresa"] || "",
+        CNPJ: row["CNPJ"] || "",
+        usuario: row["usuario"] || "",
+        senha: row["senha"] || "",
+        status: "",
+        captchaImg: "",
+      }));
+      setLinhasAtivas(linhasProcessadas);
+
+      // Salva automaticamente no backend em assets/planilhas com sufixo _validation.json
+      (async () => {
+        try {
+          const res = await fetch(`${API_BASE_URL}/api/salvar-planilha-validation`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contabilidade: empresa.nome,
+              dados: linhasProcessadas,
+              nomeArquivoOriginal: file.name
+            })
+          });
+          const resultado = await res.json();
+          if (!res.ok || !resultado.sucesso) {
+            console.warn('Falha ao salvar planilha (validation) no backend:', resultado?.erro || res.statusText);
+          } else {
+            console.log('✅ Planilha (validation) salva:', resultado.caminho);
+          }
+        } catch (err) {
+          console.warn('Erro ao salvar planilha (validation) no backend:', err);
+        }
+      })();
+    };
+    reader.readAsArrayBuffer(file);
+>>>>>>> origin/validation
   }
 
 // Função antiga de resolver captcha via REST removida (agora via socket e card manual)
