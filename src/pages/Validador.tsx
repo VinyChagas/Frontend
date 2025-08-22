@@ -358,6 +358,7 @@ function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
       }));
       setLinhasAtivas(linhasProcessadas);
 <<<<<<< HEAD
+<<<<<<< HEAD
 
       // Salva automaticamente no backend em assets/planilhas com sufixo _validation.json
       (async () => {
@@ -381,6 +382,8 @@ function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
           console.warn('Erro ao salvar planilha (validation) no backend:', err);
         }
       })();
+=======
+>>>>>>> parent of 8226b8c (Stage3.8.7)
     };
     reader.readAsArrayBuffer(file);
 >>>>>>> origin/validation
