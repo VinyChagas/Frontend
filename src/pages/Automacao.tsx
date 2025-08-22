@@ -1288,13 +1288,13 @@ export default function Automacao() {
                     style={{
                       background: "none",
                       border: "none",
-                      color: "#ffffff",
+                      color: "#6b7280",
                       cursor: "pointer",
                       fontSize: "0.9rem",
                       display: "flex",
                       alignItems: "center",
                       gap: "0.5rem",
-                      padding: "0.3rem",
+                      padding: "0.5rem",
                       borderRadius: "6px",
                       transition: "all 0.2s"
                     }}
@@ -1305,11 +1305,11 @@ export default function Automacao() {
                 
                 {/* Seletor de Empresa */}
                 <div className="empresa-selector-container">
-                  
+                  <h2>Selecionar Contabilidade</h2>
                   <EmpresaSelector />
                   {!empresaSelecionada && (
                     <p className="empresa-selector-hint">
-                      <br />
+                      Escolha uma contabilidade para importar planilhas e executar validações
                     </p>
                   )}
                   {empresaSelecionada && !empresaPossuiPlanilha && (
@@ -1322,7 +1322,7 @@ export default function Automacao() {
                 {/* Informações da empresa selecionada */}
                 {empresaSelecionada ? (
                   <>
-                  
+                    <h1>{empresaSelecionada.nome}</h1>
                     <div className="empresa-dados">
                       <span><strong>CNPJ:</strong> {empresaSelecionada.cnpj}</span>
                       <span><strong>Clientes:</strong> {empresaSelecionada.clientes}</span>
@@ -1338,14 +1338,14 @@ export default function Automacao() {
                   </>
                 ) : (
                   <>
-              
+                    <h1>Automação</h1>
                     <div className="empresa-dados">
                       <span>Selecione uma contabilidade para começar</span>
                     </div>
                   </>
                 )}
               </div>
-              <div className="header-actions" >
+              <div className="header-actions">
                 <input
                   id="input-planilha"
                   type="file"
@@ -1356,7 +1356,7 @@ export default function Automacao() {
                 />
                 <button 
                   onClick={handleImportarClick} 
-                  className="automacao-btn btn-primary automacao-header-actions" 
+                  className="automacao-btn btn-primary"
                   disabled={!empresaSelecionada}
                 >
                   {!empresaSelecionada 
@@ -1366,32 +1366,21 @@ export default function Automacao() {
                       : 'Importar Planilha'
                   }
                 </button>
-                <div className="automacao-header-actions">
-                  {todasLinhasImportadas.length > 0 && (
-                    <button
-                      onClick={abrirModalSelecao}
-                      className="automacao-btn btn-success automacao-header-btn"
-                    >
-                      Selecionar Linhas
-                    </button>
-                  )}
-                  {todasLinhasImportadas.length > 0 && (
-                    <button
-                      onClick={limparDadosEmpresa}
-                      className="automacao-btn btn-secondary automacao-header-btn"
-                    >
-                      Limpar Dados
-                    </button>
-                  )}
-                  {todasLinhasImportadas.length > 0 && (
-                    <button
-                      onClick={limparPlanilhaEmpresa}
-                      className="automacao-btn btn-danger automacao-header-btn"
-                    >
-                      Limpar Planilha
-                    </button>
-                  )}
-                </div>
+                {todasLinhasImportadas.length > 0 && (
+                  <button onClick={abrirModalSelecao} className="automacao-btn btn-success">
+                    Selecionar Linhas
+                  </button>
+                )}
+                {todasLinhasImportadas.length > 0 && (
+                  <button onClick={limparDadosEmpresa} className="automacao-btn btn-secondary">
+                    Limpar Dados da Tela
+                  </button>
+                )}
+                {todasLinhasImportadas.length > 0 && (
+                  <button onClick={limparPlanilhaEmpresa} className="automacao-btn btn-danger">
+                    Limpar Planilha
+                  </button>
+                )}
               </div>
             </div>
           </div>

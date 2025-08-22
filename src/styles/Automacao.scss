@@ -22,12 +22,12 @@
 .automacao-header {
   position: relative;
   z-index: 10;
-  background: linear-gradient(135deg, #0587ea 0%, #0274df 100%);
-  border-radius: 24px;
-  margin: 1.5rem 1rem 2rem 1rem;
+  background: linear-gradient(135deg, $primary-color, color.adjust($primary-color, $lightness: -10%));
+  border-radius: 0 0 30px 30px;
+  margin: 0 1rem 2rem 1rem;
   padding: 2rem;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  color: white;
 
   .header-content {
     display: flex;
@@ -134,31 +134,6 @@
     @include mobile {
       justify-content: center;
       width: 100%;
-    }
-  }
-
-  // Estilos específicos para os botões no header (classe usada no TSX: automacao-header-actions)
-  .automacao-header-actions {
-    /* Impõe as mesmas propriedades usadas inline no TSX */
-    display: flex !important;
-    gap: 1rem !important;
-    margin-bottom: 2rem !important;
-    align-items: center;
-    justify-content: flex-end;
-    flex-wrap: wrap;
-
-    /* pequenos ajustes para consistência visual */
-    .automacao-header-btn {
-      min-width: 130px;
-      height: 40px;
-      padding: 0.55rem 1rem;
-      font-size: 0.95rem;
-      font-weight: 700;
-      border-radius: 10px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.06);
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
     }
   }
 }
@@ -991,19 +966,6 @@
     .header-content {
       gap: 1rem;
     }
-
-    .automacao-header-actions {
-      justify-content: center;
-      gap: 0.6rem !important;
-      margin-bottom: 1rem !important;
-
-      .automacao-header-btn {
-        min-width: 110px;
-        height: 38px;
-        padding: 0.45rem 0.8rem;
-        font-size: 0.9rem;
-      }
-    }
   }
 
   .automacao-actions-bar {
@@ -1054,15 +1016,6 @@
   .automacao-header {
     .header-content {
       gap: 1.5rem;
-    }
-
-    .automacao-header-actions {
-      .automacao-header-btn {
-        min-width: 140px;
-        height: 42px;
-        padding: 0.6rem 1.2rem;
-        font-size: 1rem;
-      }
     }
   }
 
@@ -1390,18 +1343,17 @@
 }
 
 .automacao-card {
-  background: #fff;
-  border-radius: 16px;
-  box-shadow: 0 4px 24px rgba(0,0,0,0.10);
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
   max-width: 1700px;
   width: 100%;
-  padding: 4rem 2rem 2.5rem 2rem; // mais espaço no topo, menos na base
+  padding: 4rem 2rem 2.5rem 2rem;
   margin: 2rem 0;
   display: flex;
   flex-direction: column;
   min-height: 80vh;
-  // Garante que o conteúdo não fique colado no topo
-  overflow: visible;
+  border: 1px solid $border-color;
 }
 
 // Ajuste para os botões ficarem bem distribuídos
@@ -1849,17 +1801,16 @@
   position: relative;
   display: inline-block;
   width: 100%;
-  max-width: 800px;
+  max-width: 400px;
 
   .empresa-selector-button {
     width: 100%;
-    margin-bottom: -1rem;
-    padding: 0.4rem 0.1rem;
-    background: transparent;
-    border: 2px solid transparent;
-    color: $text-color;
-    font-size: 2rem;
+    padding: 1rem 1.5rem;
+    background: rgba(255, 255, 255, 0.9);
+    border: 2px solid rgba(255, 255, 255, 0.3);
     border-radius: 12px;
+    color: $text-color;
+    font-size: 1rem;
     font-weight: 600;
     cursor: pointer;
     display: flex;
@@ -1869,20 +1820,27 @@
     backdrop-filter: blur(10px);
 
     &:hover {
-      
+      background: rgba(255, 255, 255, 1);
+      border-color: rgba(255, 255, 255, 0.6);
       transform: translateY(-2px);
       box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
     }
 
     &:focus {
       outline: none;
+      border-color: rgba(255, 255, 255, 0.8);
+      box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.2);
     }
 
     // Estilo especial quando não há empresa selecionada
     &:not(.has-empresa) {
+      background: rgba(255, 255, 255, 0.7);
+      border-color: rgba(255, 255, 255, 0.5);
       color: rgba($text-color, 0.8);
       
       &:hover {
+        background: rgba(255, 255, 255, 0.9);
+        border-color: rgba(255, 255, 255, 0.7);
         color: $text-color;
       }
     }
@@ -1892,10 +1850,8 @@
     flex: 1;
     text-align: left;
     overflow: hidden;
-    color: #f7f5f5;
     text-overflow: ellipsis;
     white-space: nowrap;
-    font-weight: bold;
   }
 
   .empresa-selector-arrow {
@@ -2005,7 +1961,6 @@
     .empresa-selector-button {
       padding: 0.75rem 1rem;
       font-size: 0.9rem;
-      color: transparent;
     }
   }
 
@@ -2098,12 +2053,13 @@
 
 .empresa-planilha-hint {
   margin-top: 0.5rem;
-  padding: 0.3rem 0rem;
+  padding: 0.75rem 1rem;
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
   color: white;
   border-radius: 8px;
   font-size: 0.9rem;
   font-weight: 500;
-  text-align: left;
+  text-align: center;
   box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
 }
 
