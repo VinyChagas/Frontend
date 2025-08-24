@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Save, Settings, Monitor, CheckCircle, Play as PlayIcon, Plus, Trash2 } from "lucide-react";
+import { Save, Settings, Monitor, CheckCircle, Play as PlayIcon, Plus, Trash2, AlertCircle } from "lucide-react";
 import "../styles/Parametros.scss";
 import { useConfiguracaoAutomacao, type ParametrosValidacao, type ParametrosAutomacao } from "../hooks/useConfiguracaoAutomacao";
 
@@ -13,7 +13,8 @@ export default function Parametros() {
     adicionarConfiguracao,
     removerConfiguracao,
     criarPayloadExecucao,
-    atualizarParametros
+    atualizarParametros,
+    MAX_NAVEGADORES
   } = useConfiguracaoAutomacao();
 
   // Estados locais para os parâmetros
@@ -125,6 +126,19 @@ export default function Parametros() {
 
   // Função para atualizar parâmetros de validação
   const atualizarParametrosValidacao = (campo: keyof ParametrosValidacao, valor: any) => {
+    // Validação especial para número de navegadores
+    if (campo === 'numeroNavegadores') {
+      const numValor = parseInt(valor);
+      if (isNaN(numValor) || numValor < 1) {
+        alert('O número de navegadores deve ser um valor válido maior que 0');
+        return;
+      }
+      if (numValor > MAX_NAVEGADORES) {
+        alert(`O número de navegadores não pode exceder ${MAX_NAVEGADORES}`);
+        return;
+      }
+    }
+
     // Atualiza o estado local
     setParametrosValidacao(prev => ({
       ...prev,
@@ -137,6 +151,19 @@ export default function Parametros() {
 
   // Função para atualizar parâmetros de automação
   const atualizarParametrosAutomacao = (campo: keyof ParametrosAutomacao, valor: any) => {
+    // Validação especial para número de navegadores
+    if (campo === 'numeroNavegadores') {
+      const numValor = parseInt(valor);
+      if (isNaN(numValor) || numValor < 1) {
+        alert('O número de navegadores deve ser um valor válido maior que 0');
+        return;
+      }
+      if (numValor > MAX_NAVEGADORES) {
+        alert(`O número de navegadores não pode exceder ${MAX_NAVEGADORES}`);
+        return;
+      }
+    }
+
     // Atualiza o estado local
     setParametrosAutomacao(prev => ({
       ...prev,
@@ -179,6 +206,17 @@ export default function Parametros() {
             <Save size={16} />
             Salvar Configuração
           </button>
+        </div>
+      </div>
+
+      {/* Banner informativo sobre limite de navegadores */}
+      <div className="info-banner">
+        <div className="banner-content">
+          <Monitor size={20} />
+          <div>
+            <strong>Limite de Navegadores</strong>
+            <p>O sistema permite configurar até <strong>{MAX_NAVEGADORES} navegadores</strong> simultâneos. Valores acima deste limite serão automaticamente reduzidos pelo backend.</p>
+          </div>
         </div>
       </div>
 
@@ -279,14 +317,31 @@ export default function Parametros() {
 
               <div className="form-group">
                 <label htmlFor="navValidacao">Número de Navegadores:</label>
-                <input
-                  id="navValidacao"
-                  type="number"
-                  min="1"
-                  max="10"
-                  value={parametrosValidacao.numeroNavegadores}
-                  onChange={(e) => atualizarParametrosValidacao('numeroNavegadores', parseInt(e.target.value))}
-                />
+                <div className="input-with-validation">
+                  <input
+                    id="navValidacao"
+                    type="number"
+                    min="1"
+                    max={MAX_NAVEGADORES}
+                    value={parametrosValidacao.numeroNavegadores}
+                    onChange={(e) => atualizarParametrosValidacao('numeroNavegadores', parseInt(e.target.value))}
+                    className={parametrosValidacao.numeroNavegadores > MAX_NAVEGADORES * 0.8 ? 'warning' : ''}
+                  />
+                  {parametrosValidacao.numeroNavegadores > MAX_NAVEGADORES * 0.8 && (
+                    <div className="validation-message warning">
+                      <AlertCircle size={16} />
+                      <span>
+                        {parametrosValidacao.numeroNavegadores > MAX_NAVEGADORES 
+                          ? `Valor excede o limite máximo de ${MAX_NAVEGADORES}`
+                          : `Valor próximo ao limite máximo de ${MAX_NAVEGADORES}`
+                        }
+                      </span>
+                    </div>
+                  )}
+                </div>
+                <small className="form-help">
+                  Máximo: {MAX_NAVEGADORES} navegadores
+                </small>
               </div>
 
               <div className="form-group">
@@ -380,14 +435,31 @@ export default function Parametros() {
 
               <div className="form-group">
                 <label htmlFor="navAutomacao">Número de Navegadores:</label>
-                <input
-                  id="navAutomacao"
-                  type="number"
-                  min="1"
-                  max="10"
-                  value={parametrosAutomacao.numeroNavegadores}
-                  onChange={(e) => atualizarParametrosAutomacao('numeroNavegadores', parseInt(e.target.value))}
-                />
+                <div className="input-with-validation">
+                  <input
+                    id="navAutomacao"
+                    type="number"
+                    min="1"
+                    max={MAX_NAVEGADORES}
+                    value={parametrosAutomacao.numeroNavegadores}
+                    onChange={(e) => atualizarParametrosAutomacao('numeroNavegadores', parseInt(e.target.value))}
+                    className={parametrosAutomacao.numeroNavegadores > MAX_NAVEGADORES * 0.8 ? 'warning' : ''}
+                  />
+                  {parametrosAutomacao.numeroNavegadores > MAX_NAVEGADORES * 0.8 && (
+                    <div className="validation-message warning">
+                      <AlertCircle size={16} />
+                      <span>
+                        {parametrosAutomacao.numeroNavegadores > MAX_NAVEGADORES 
+                          ? `Valor excede o limite máximo de ${MAX_NAVEGADORES}`
+                          : `Valor próximo ao limite máximo de ${MAX_NAVEGADORES}`
+                        }
+                      </span>
+                    </div>
+                  )}
+                </div>
+                <small className="form-help">
+                  Máximo: {MAX_NAVEGADORES} navegadores
+                </small>
               </div>
 
               <div className="form-group">

@@ -1,5 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 
+// Constantes do sistema
+export const MAX_NAVEGADORES = 100; // Limite máximo de navegadores permitidos pelo backend
+
 // Tipos para os parâmetros de configuração
 export interface ParametrosValidacao {
   modoExecucao: 'manual' | 'automatico';
@@ -216,6 +219,7 @@ export function useConfiguracaoAutomacao() {
     adicionarConfiguracao,
     removerConfiguracao,
     criarPayloadExecucao,
-    atualizarParametros
+    atualizarParametros,
+    MAX_NAVEGADORES
   };
 }

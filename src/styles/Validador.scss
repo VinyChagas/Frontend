@@ -1194,5 +1194,102 @@
   }
 }
 
+.validador-captcha-card {
+  display: flex;
+  align-items: center;
+  gap: 1.1rem;
+  background: linear-gradient(90deg, #2563eb 60%, #38bdf8 100%);
+  border-radius: 12px;
+  padding: 0.5rem 1.2rem;
+  min-height: 48px;
+  min-width: 340px;
+  box-shadow: 0 2px 8px rgba(30,41,59,0.08);
+  margin-top: 0; // remove margem extra
+  width: fit-content;
+}
+
+.validador-import-status {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  background: linear-gradient(90deg, #22c55e 60%, #16a34a 100%);
+  border-radius: 12px;
+  padding: 0.5rem 1.2rem;
+  min-height: 48px;
+  min-width: 280px;
+  box-shadow: 0 2px 8px rgba(34,197,94,0.15);
+  margin-top: 0.7rem;
+  width: fit-content;
+  animation: validador-import-slideIn 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.validador-import-label {
+  color: #fff;
+  font-weight: 700;
+  font-size: 1.05rem;
+}
+
+.validador-import-count {
+  color: #fff;
+  font-weight: 800;
+  font-size: 1.1rem;
+  background: rgba(255, 255, 255, 0.2);
+  padding: 0.2rem 0.8rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+@keyframes validador-import-slideIn {
+  0% {
+    opacity: 0;
+    transform: translateX(-20px) scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+// Indicador de modo automático
+.validador-automatico-indicator {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.3rem;
+  background: linear-gradient(90deg, #f59e0b 60%, #f97316 100%);
+  border-radius: 12px;
+  padding: 0.5rem 1.2rem;
+  min-height: 48px;
+  min-width: 280px;
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.15);
+  margin-top: 0;
+  width: fit-content;
+  animation: validador-automatico-slideIn 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.validador-automatico-label {
+  color: #fff;
+  font-weight: 700;
+  font-size: 1.05rem;
+}
+
+.validador-automatico-desc {
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.9rem;
+  opacity: 0.9;
+}
+
+@keyframes validador-automatico-slideIn {
+  0% {
+    opacity: 0;
+    transform: translateX(-20px) scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
 
 

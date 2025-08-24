@@ -9,11 +9,11 @@ import * as XLSX from "xlsx";
 const API_BASE_URL: string = (import.meta as any)?.env?.VITE_API_URL || "http://localhost:4000";
 
 // Tipos de dados
-interface Empresa {
-  nome: string;
-  cnpj: string;
-  clientes: number;
-}
+// interface Empresa { // Removida pois não é mais usada
+//   nome: string;
+//   cnpj: string;
+//   clientes: number;
+// }
 
 interface Linha {
   linha: number;
@@ -64,7 +64,7 @@ interface CaptchaEvent {
 const socket = io(API_BASE_URL);
 
 export default function Validador() {
-  const [empresa, setEmpresa] = useState<Empresa>({ nome: "", cnpj: "", clientes: 0 });
+  // Remove a dependência da empresa - agora é uma tela padrão
   const [linhasAtivas, setLinhasAtivas] = useState<Linha[]>([]);
   const [linhasComErro, setLinhasComErro] = useState<Linha[]>([]);
   const [respostaCaptcha, setRespostaCaptcha] = useState<Record<number,string>>({});
@@ -74,6 +74,25 @@ export default function Validador() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [globalProgress, setGlobalProgress] = useState<number>(0);
   const [statusAutomacao, setStatusAutomacao] = useState<{ pausada: boolean; parada: boolean }>({ pausada: false, parada: false });
+  const [todasLinhasImportadas, setTodasLinhasImportadas] = useState<Linha[]>([]);
+  const [modoExecucao, setModoExecucao] = useState<'manual' | 'automatico'>('manual');
+
+  // Carregar configuração ativa para determinar o modo de execução
+  useEffect(() => {
+    const ativaKey = localStorage.getItem('configuracaoAtiva') || 'padrao';
+    try {
+      const rawCfg = localStorage.getItem('configuracoesSistema');
+      if (rawCfg) {
+        const allCfg = JSON.parse(rawCfg);
+        const configAtiva = allCfg?.[ativaKey] || allCfg?.padrao || null;
+        if (configAtiva?.validacao?.modoExecucao) {
+          setModoExecucao(configAtiva.validacao.modoExecucao);
+        }
+      }
+    } catch (error) {
+      console.log('Erro ao carregar configuração:', error);
+    }
+  }, []);
 
   // Função para traduzir status em descrições amigáveis
   const getEtapaDescricao = (status: string | undefined): string => {
@@ -116,31 +135,37 @@ export default function Validador() {
 // Captura o captcha enviado pelo backend via socket e exibe para o usuário
 useEffect(() => {
   function handleCaptcha(data: CaptchaEvent) {
-    // Se for o mesmo captcha (mesma linha), só atualiza a imagem e limpa o input
-    setCaptchaImgBase64(data.imagem);
-    setCaptchaInput("");
-    setLinhaCaptchaAtual((linhaAtual) => {
-      // Se for um novo captcha para a mesma linha, mantém a linha
-      if (linhaAtual === data.linha) return linhaAtual;
-      // Se for para outra linha, atualiza
-      return data.linha;
-    });
+    // Só processa captcha se estiver no modo manual
+    if (modoExecucao === 'manual') {
+      // Se for o mesmo captcha (mesma linha), só atualiza a imagem e limpa o input
+      setCaptchaImgBase64(data.imagem);
+      setCaptchaInput("");
+      setLinhaCaptchaAtual((linhaAtual) => {
+        // Se for um novo captcha para a mesma linha, mantém a linha
+        if (linhaAtual === data.linha) return linhaAtual;
+        // Se for para outra linha, atualiza
+        return data.linha;
+      });
+    }
   }
   socket.on("captcha", handleCaptcha);
   return () => {
     socket.off("captcha", handleCaptcha);
   };
-}, []);
+}, [modoExecucao]);
 
 // Função para enviar a resposta do captcha para o backend via socket
 function enviarCaptchaParaBackend(valor?: string) {
-  const resposta = valor !== undefined ? valor : captchaInput;
-  if (resposta && resposta.length === 5 && linhaCaptchaAtual != null) {
-    socket.emit("captcha-resposta", {
-      linha: linhaCaptchaAtual,
-      resposta
-    });
-    // Não limpa o estado aqui! Só limpa quando o backend retornar sucesso para a linha
+  // Só envia captcha se estiver no modo manual
+  if (modoExecucao === 'manual') {
+    const resposta = valor !== undefined ? valor : captchaInput;
+    if (resposta && resposta.length === 5 && linhaCaptchaAtual != null) {
+      socket.emit("captcha-resposta", {
+        linha: linhaCaptchaAtual,
+        resposta
+      });
+      // Não limpa o estado aqui! Só limpa quando o backend retornar sucesso para a linha
+    }
   }
 }
 
@@ -200,8 +225,8 @@ useEffect(() => {
       );
 
       if (status.toLowerCase().includes("sucesso")) {
-        // Se for sucesso para a linha do captcha, limpa o estado de captcha
-        if (linhaCaptchaAtual === linha) {
+        // Se for sucesso para a linha do captcha, limpa o estado de captcha (apenas no modo manual)
+        if (linhaCaptchaAtual === linha && modoExecucao === 'manual') {
           setCaptchaImgBase64(null);
           setCaptchaInput("");
           setLinhaCaptchaAtual(null);
@@ -209,9 +234,9 @@ useEffect(() => {
         // Mantém a ordem original das linhas (não reordena para o final)
         return atualizadas;
       }
-      // Se for erro, só remove da lista se NÃO for a linha do captcha atual
+      // Se for erro, só remove da lista se NÃO for a linha do captcha atual (apenas no modo manual)
       if (status.toLowerCase().includes("erro") || status.toLowerCase().includes("nova senha")) {
-        if (linhaCaptchaAtual === linha) {
+        if (linhaCaptchaAtual === linha && modoExecucao === 'manual') {
           // Mantém a linha para permitir nova tentativa de captcha
           return atualizadas;
         }
@@ -233,7 +258,7 @@ useEffect(() => {
   return () => {
     socket.off("progresso", handleProgresso);
   };
-}, [linhaCaptchaAtual]);
+}, [linhaCaptchaAtual, modoExecucao]);
 
 // Progresso global baseado na média dos percentuais por linha
 useEffect(() => {
@@ -256,57 +281,23 @@ useEffect(() => {
 
 
 useEffect(() => {
-  fetch(`${API_BASE_URL}/api/empresas`)
+  // Carrega dados de validação padrão em vez de dados de empresa
+  fetch(`${API_BASE_URL}/api/validador-dados`)
     .then((res) => res.json())
-    .then((data) => {
-      if (data.length > 0) {
-        setEmpresa(data[0]);
-
-        // Carrega JSON da contabilidade
-        const nomeContabilidade = data[0].nome;
-        const nomeArquivoSeguro = nomeContabilidade.replace(/[^\w\d]/g, '_');
-        fetch(`${API_BASE_URL}/api/validacoes/${encodeURIComponent(nomeArquivoSeguro)}`)
-          .then(res => res.json())
-          .then(dados => {
-            if (Array.isArray(dados)) {
-              setLinhasAtivas(dados);
-            } else {
-              console.warn('Nenhum dado encontrado para esta contabilidade.');
-            }
-          })
-          .catch(err => console.error('Erro ao carregar JSON da contabilidade:', err));
+    .then((dados) => {
+      if (Array.isArray(dados) && dados.length > 0) {
+        console.log('✅ [FRONTEND] Dados de validação padrão carregados:', dados.length, 'linhas');
+        setTodasLinhasImportadas(dados);
+        // Não ativa automaticamente, apenas carrega os dados importados
+      } else {
+        console.log('ℹ️ [FRONTEND] Nenhum dado de validação padrão encontrado.');
       }
-      });
-  }, []);
+    })
+    .catch(() => {
+      console.log('ℹ️ [FRONTEND] Nenhum arquivo de validação padrão encontrado (primeira execução).');
+    });
+}, []);
 
-
-
-useEffect(() => {
-  async function carregarValidacoes() {
-    try {
-      const nomeTratado = empresa.nome.replace(/[^\w\d]/g, '_');
-      const res = await fetch(`${API_BASE_URL}/empresas/validacoes/${nomeTratado}`);
-      if (!res.ok) {
-        console.warn('Nenhum dado de validação encontrado.');
-        return;
-      }
-
-      const validacoesSalvas = await res.json();
-      setLinhasAtivas((prev) =>
-        prev.map((linha) => {
-          const validada = (validacoesSalvas as Linha[]).find((v: Linha) => v.linha === linha.linha);
-          return validada ? { ...linha, status: validada.status || linha.status } : linha;
-        })
-      );
-    } catch (err) {
-      console.error('Erro ao carregar validações:', err);
-    }
-  }
-
-  if (empresa?.nome) {
-    carregarValidacoes();
-  }
-}, [empresa]);
   function handleImportarClick() {
     // Usa ref para evitar query por id
     fileInputRef.current?.click();
@@ -315,32 +306,95 @@ useEffect(() => {
 function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
   const file = e.target.files?.[0];
   if (file) {
+    console.log('📁 [FRONTEND] Arquivo selecionado:', file.name, 'Tamanho:', file.size, 'bytes');
+    
     const reader = new FileReader();
-    reader.onload = (event) => {
-      const data = new Uint8Array(event.target?.result as ArrayBuffer);
-      const workbook = XLSX.read(data, { type: "array" });
-      const sheet = workbook.Sheets[workbook.SheetNames[0]];
-            const rows = XLSX.utils.sheet_to_json(sheet);
+    reader.onload = async (event) => {
+      try {
+        console.log('📖 [FRONTEND] Arquivo lido com sucesso, processando...');
+        
+        const data = new Uint8Array(event.target?.result as ArrayBuffer);
+        console.log('📊 [FRONTEND] Dados convertidos para Uint8Array, tamanho:', data.length);
+        
+        const workbook = XLSX.read(data, { type: "array" });
+        console.log('📋 [FRONTEND] Workbook criado, planilhas:', workbook.SheetNames);
+        
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(sheet);
+        console.log('📝 [FRONTEND] Linhas extraídas:', rows.length);
 
-      // Processa localmente para exibir imediatamente
-      const linhasProcessadas = (rows as any[]).map((row: any, index: number) => ({
-        linha: index + 2,
-        procurador: row["Procurador"]?.toUpperCase() || "",
-        presumido: row["Presumido"]?.toUpperCase() || "",
-        empresa: row["empresa"] || "",
-        CNPJ: row["CNPJ"] || "",
-        usuario: row["usuario"] || "",
-        senha: row["senha"] || "",
-        status: "",
-        captchaImg: "",
-      }));
-      setTodasLinhasImportadas(linhasProcessadas);
-      setLinhasAtivas([]); // não ativa automaticamente
+        // Processa localmente para exibir imediatamente
+        const linhasProcessadas = (rows as any[]).map((row: any, index: number) => ({
+          linha: index + 2,
+          procurador: row["Procurador"]?.toUpperCase() || "",
+          presumido: row["Presumido"]?.toUpperCase() || "",
+          empresa: row["empresa"] || "",
+          CNPJ: row["CNPJ"] || "",
+          usuario: row["usuario"] || "",
+          senha: row["senha"] || "",
+          status: "",
+          captchaImg: "",
+        }));
+        
+        console.log('✅ [FRONTEND] Linhas processadas:', linhasProcessadas.length);
+        console.log('📋 [FRONTEND] Primeira linha de exemplo:', linhasProcessadas[0]);
+        
+        setTodasLinhasImportadas(linhasProcessadas);
+        setLinhasAtivas([]); // não ativa automaticamente
+        
+        // Salva automaticamente no backend usando o novo endpoint
+        try {
+          const res = await fetch(`${API_BASE_URL}/api/salvar-validador`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              dados: linhasProcessadas,
+            }),
+          });
+
+          const resultado = await res.json();
+          if (resultado.sucesso) {
+            console.log('✅ [FRONTEND] Planilha salva automaticamente no backend');
+          } else {
+            console.warn('⚠️ [FRONTEND] Não foi possível salvar automaticamente:', resultado.erro);
+          }
+        } catch (error) {
+          console.warn('⚠️ [FRONTEND] Erro ao salvar automaticamente:', error);
+        }
+        
+        // Feedback para o usuário
+        alert(`✅ Planilha importada com sucesso! ${linhasProcessadas.length} linhas carregadas. Clique em "Ativar Linhas" para começar a validação.`);
+        
+      } catch (error) {
+        console.error('❌ [FRONTEND] Erro ao processar planilha:', error);
+        alert('❌ Erro ao processar a planilha. Verifique se o formato está correto.');
+      }
     };
+    
+    reader.onerror = (error) => {
+      console.error('❌ [FRONTEND] Erro ao ler arquivo:', error);
+      alert('❌ Erro ao ler o arquivo selecionado.');
+    };
+    
     reader.readAsArrayBuffer(file);
+  } else {
+    console.log('⚠️ [FRONTEND] Nenhum arquivo selecionado');
   }
   e.target.value = "";
 }
+
+// Função para ativar as linhas importadas
+const ativarLinhasImportadas = () => {
+  if (todasLinhasImportadas.length === 0) {
+    alert('❌ Nenhuma planilha foi importada ainda.');
+    return;
+  }
+  
+  setLinhasAtivas(todasLinhasImportadas);
+  alert(`✅ ${todasLinhasImportadas.length} linhas ativadas para validação!`);
+};
 
 // Função antiga de resolver captcha via REST removida (agora via socket e card manual)
 
@@ -368,14 +422,6 @@ function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
       }
     }
 
-    console.log('🚀 [FRONTEND] Parâmetros:', {
-      contabilidade: empresa.nome,
-      modoLogin: modoLogin === 'automatico' ? 'Automático' : 'Manual',
-      modoResolucao: resolucao,
-      modoDepuracao,
-      qtdNavegadores: 'SEMPRE 8 (fixo no backend)'
-    });
-
     // Captura configurações completas da tela de Parâmetros
     const ativaKey = localStorage.getItem('configuracaoAtiva') || 'padrao';
     let configuracoesSelecionadas: any = null;
@@ -387,17 +433,24 @@ function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
       }
     } catch {}
 
+    console.log('🚀 [FRONTEND] Parâmetros:', {
+      contabilidade: "empresa_padrao",
+      modoLogin: modoExecucao === 'automatico' ? "Automatico" : "Manual",
+      modoResolucao: "FHD",
+      modoDepuracao: false,
+      qtdNavegadores: configuracoesSelecionadas?.validacao?.numeroNavegadores || 'Padrão'
+    });
+
     const res = await fetch(`${API_BASE_URL}/executar-validacao`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        contabilidade: empresa.nome,
-        modoLogin: modoLogin === 'automatico' ? 'Automático' : 'Manual',
-        modoResolucao: resolucao,
-        modoDepuracao,
-        // qtdNavegadores é ignorado pelo backend (sempre 8)
+        contabilidade: "empresa_padrao",
+        modoLogin: modoExecucao === 'automatico' ? "Automatico" : "Manual",
+        modoResolucao: "FHD",
+        modoDepuracao: false,
         linhas: linhasAtivas.map(l => l.linha), // Envia linhas específicas se houver
         configuracaoAtiva: ativaKey,
         configuracoes: configuracoesSelecionadas
@@ -408,7 +461,9 @@ function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     console.log('🚀 [FRONTEND] Resposta do backend:', resultado);
 
     if (resultado.sucesso) {
-      alert("✅ Validação iniciada com sucesso! O sistema usará 8 navegadores automaticamente.");
+      const qtdNav = configuracoesSelecionadas?.validacao?.numeroNavegadores || 'padrão';
+      const modoTexto = modoExecucao === 'automatico' ? 'automático' : 'manual';
+      alert(`✅ Validação iniciada com sucesso! O sistema usará ${qtdNav} navegadores em modo ${modoTexto} conforme configurado.`);
       // Atualiza o status para mostrar que está ativa
       setStatusAutomacao({ pausada: false, parada: false });
     } else {
@@ -422,13 +477,12 @@ function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
 
   const salvarNoBackend = async () => {
   try {
-      const res = await fetch(`${API_BASE_URL}/api/salvar-json`, {
+    const res = await fetch(`${API_BASE_URL}/api/salvar-validador`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        contabilidade: empresa.nome,
         dados: linhasAtivas,
       }),
     });
@@ -532,8 +586,8 @@ function renderTabela(linhas: Linha[]) {
                 </tr>
               )}
               
-              {/* CAPTCHAS VISUAIS */}
-              {linha.status === 'captcha' && (
+              {/* CAPTCHAS VISUAIS - apenas no modo manual */}
+              {linha.status === 'captcha' && modoExecucao === 'manual' && (
                 <tr className="validador-tabela-captcha-overlay-cell">
                   <td colSpan={6}>
                     <div className={`validador-captcha-overlay validador-captcha-bg-${linha.status?.toLowerCase()}`}>
@@ -630,42 +684,20 @@ function renderTabelaErros(linhas: Linha[]) {
 }
 
 // ListaStatusEmpresas removido pois não é utilizado
-function carregarParametrosValidacao() {
-  try {
-    const ativa = localStorage.getItem('configuracaoAtiva') || 'padrao';
-    const raw = localStorage.getItem('configuracoesSistema');
-    if (!raw) return { modoExecucao: 'manual', tipoMonitor: 'FHD', modoDepuracao: false } as const;
-    const cfgs = JSON.parse(raw);
-    const valid = cfgs?.[ativa]?.validacao || cfgs?.padrao?.validacao;
-    if (!valid) return { modoExecucao: 'manual', tipoMonitor: 'FHD', modoDepuracao: false } as const;
-    return valid as { modoExecucao: 'manual' | 'automatico'; tipoMonitor: 'FHD' | 'QHD'; modoDepuracao: boolean };
-  } catch {
-    return { modoExecucao: 'manual', tipoMonitor: 'FHD', modoDepuracao: false } as const;
-  }
-}
-
-const inicial = carregarParametrosValidacao();
-const [modoLogin, setModoLogin] = useState<'automatico' | 'manual'>(inicial.modoExecucao);
-const [resolucao, setResolucao] = useState<'FHD' | 'QHD'>(inicial.tipoMonitor);
-const [modoDepuracao, setModoDepuracao] = useState<boolean>(inicial.modoDepuracao);
-
-useEffect(() => {
-  const atual = carregarParametrosValidacao();
-  setModoLogin(atual.modoExecucao);
-  setResolucao(atual.tipoMonitor);
-  setModoDepuracao(atual.modoDepuracao);
-}, []);
 
 const captchaTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
 function handleCaptchaInputChange(e: React.ChangeEvent<HTMLInputElement>) {
-  const value = e.target.value.replace(/\D/g, '').slice(0, 5);
-  setCaptchaInput(value);
-  if (captchaTimeout.current) clearTimeout(captchaTimeout.current);
-  if (value.length === 5) {
-    captchaTimeout.current = setTimeout(() => {
-      enviarCaptchaParaBackend(value);
-    }, 500); // 500ms debounce
+  // Só processa input do captcha se estiver no modo manual
+  if (modoExecucao === 'manual') {
+    const value = e.target.value.replace(/\D/g, '').slice(0, 5);
+    setCaptchaInput(value);
+    if (captchaTimeout.current) clearTimeout(captchaTimeout.current);
+    if (value.length === 5) {
+      captchaTimeout.current = setTimeout(() => {
+        enviarCaptchaParaBackend(value);
+      }, 500); // 500ms debounce
+    }
   }
 }
 
@@ -675,14 +707,15 @@ function handleCaptchaInputChange(e: React.ChangeEvent<HTMLInputElement>) {
     setLinhasAtivas([]);
     // Limpa linhas com erro
     setLinhasComErro([]);
-    // Limpa respostas de captcha
-    setRespostaCaptcha({});
-    // Limpa imagem do captcha
-    setCaptchaImgBase64(null);
-    // Limpa input do captcha
-    setCaptchaInput("");
-    // Reseta linha do captcha atual
-    setLinhaCaptchaAtual(null);
+    // Limpa linhas importadas
+    setTodasLinhasImportadas([]);
+    // Limpa respostas de captcha (apenas se estiver no modo manual)
+    if (modoExecucao === 'manual') {
+      setRespostaCaptcha({});
+      setCaptchaImgBase64(null);
+      setCaptchaInput("");
+      setLinhaCaptchaAtual(null);
+    }
     // Reseta progresso global
     setGlobalProgress(0);
     // Reseta status da automação
@@ -700,10 +733,10 @@ return (
       <div className="validador-container">
         <div className="validador-top-row">
           <div className="validador-header-info">
-            <h1 className="validador-titulo">{empresa.nome}</h1>
+            <h1 className="validador-titulo">Empresa Padrão</h1>
             <div className="validador-empresa-dados">
-              <span><strong>CNPJ:</strong> {empresa.cnpj}</span>
-              <span><strong>Clientes:</strong> {empresa.clientes}</span>
+              <span><strong>CNPJ:</strong> 00.000.000/0001-00</span>
+              <span><strong>Clientes:</strong> 100</span>
             </div>
           </div>
           <div>
@@ -724,8 +757,8 @@ return (
         <div className="validador-actions-bar">
           <div className="validador-actions-left">
             {/* Removido label e selects de modo, resolução e navegadores */}
-            {/* Exibe o card de captcha somente se modoLogin for 'manual' */}
-            {modoLogin === 'manual' && (
+            {/* Exibe o card de captcha apenas no modo manual */}
+            {modoExecucao === 'manual' && (
               <div className="validador-captcha-card">
                 <span className="validador-captcha-label">Captcha:</span>
                 <div className="validador-captcha-img-area">
@@ -745,6 +778,22 @@ return (
                   onChange={handleCaptchaInputChange}
                   placeholder="00000"
                 />
+              </div>
+            )}
+            
+            {/* Indicador de modo automático quando aplicável */}
+            {modoExecucao === 'automatico' && (
+              <div className="validador-automatico-indicator">
+                <span className="validador-automatico-label">🤖 Modo Automático</span>
+                <span className="validador-automatico-desc">CAPTCHA resolvido automaticamente</span>
+              </div>
+            )}
+            
+            {/* Indicador de status da importação */}
+            {todasLinhasImportadas.length > 0 && (
+              <div className="validador-import-status">
+                <span className="validador-import-label">📋 Planilha Importada:</span>
+                <span className="validador-import-count">{todasLinhasImportadas.length} linhas</span>
               </div>
             )}
           </div>
@@ -770,6 +819,19 @@ return (
               </button>
             <button className="validador-btn-executar" type="button" onClick={salvarNoBackend}>
               Salvar
+            </button>
+            <button 
+              className="validador-btn-executar" 
+              type="button" 
+              onClick={ativarLinhasImportadas}
+              disabled={todasLinhasImportadas.length === 0}
+              style={{ 
+                background: todasLinhasImportadas.length > 0 
+                  ? 'linear-gradient(90deg, #22c55e 60%, #16a34a 100%)' 
+                  : 'linear-gradient(90deg, #9ca3af 60%, #6b7280 100%)'
+              }}
+            >
+              {todasLinhasImportadas.length === 0 ? 'Sem Planilha' : `Ativar Linhas (${todasLinhasImportadas.length})`}
             </button>
           </div>
           <div className="validador-actions-right">
