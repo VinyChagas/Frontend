@@ -320,30 +320,8 @@ function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
       const data = new Uint8Array(event.target?.result as ArrayBuffer);
       const workbook = XLSX.read(data, { type: "array" });
       const sheet = workbook.Sheets[workbook.SheetNames[0]];
-      const rows = XLSX.utils.sheet_to_json(sheet);
+            const rows = XLSX.utils.sheet_to_json(sheet);
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-        const linhasProcessadas = (rows as any[]).map((row: any, index: number) => ({
-          linha: index + 2,
-          procurador: row["Procurador"]?.toUpperCase() || "",
-          presumido: row["Presumido"]?.toUpperCase() || "",
-          empresa: row["empresa"] || "",
-          CNPJ: row["CNPJ"] || "",
-          usuario: row["usuario"] || "",
-          senha: row["senha"] || "",
-          status: "",
-          captchaImg: "",
-        }));
-        setTodasLinhasImportadas(linhasProcessadas);
-        setLinhasAtivas([]); // não ativa automaticamente
-      };
-      reader.readAsArrayBuffer(file);
-    }
-    e.target.value = "";
-=======
-=======
->>>>>>> parent of 82642d4 (Stage3.8.9)
       // Processa localmente para exibir imediatamente
       const linhasProcessadas = (rows as any[]).map((row: any, index: number) => ({
         linha: index + 2,
@@ -356,44 +334,14 @@ function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
         status: "",
         captchaImg: "",
       }));
-      setLinhasAtivas(linhasProcessadas);
-<<<<<<< HEAD
-<<<<<<< HEAD
-
-      // Salva automaticamente no backend em assets/planilhas com sufixo _validation.json
-      (async () => {
-        try {
-          const res = await fetch(`${API_BASE_URL}/api/salvar-planilha-validation`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              contabilidade: empresa.nome,
-              dados: linhasProcessadas,
-              nomeArquivoOriginal: file.name
-            })
-          });
-          const resultado = await res.json();
-          if (!res.ok || !resultado.sucesso) {
-            console.warn('Falha ao salvar planilha (validation) no backend:', resultado?.erro || res.statusText);
-          } else {
-            console.log('✅ Planilha (validation) salva:', resultado.caminho);
-          }
-        } catch (err) {
-          console.warn('Erro ao salvar planilha (validation) no backend:', err);
-        }
-      })();
-=======
->>>>>>> parent of 8226b8c (Stage3.8.7)
+      setTodasLinhasImportadas(linhasProcessadas);
+      setLinhasAtivas([]); // não ativa automaticamente
     };
     reader.readAsArrayBuffer(file);
->>>>>>> origin/validation
-=======
-    };
-    reader.readAsArrayBuffer(file);
->>>>>>> parent of 82642d4 (Stage3.8.9)
   }
   e.target.value = "";
 }
+
 // Função antiga de resolver captcha via REST removida (agora via socket e card manual)
 
   const executarValidacao = async () => {
